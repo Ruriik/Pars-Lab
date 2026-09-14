@@ -1,0 +1,28 @@
+{
+  "name": "pars-lab",
+  "version": "1.0.0",
+  "description": "Pars Lab - Real-time Kahoot-style Retro 8-bit Quiz System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "quiz",
+    "kahoot",
+    "retro",
+    "8-bit",
+    "zero-trust",
+    "socket.io",
+    "express"
+  ],
+  "author": "Pars Lab",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}

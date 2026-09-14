@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PARS LAB // RETRO QUIZ SYSTEM</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div style="min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;">
+    
+    <!-- Branding -->
+    <div class="logo-container">
+      <img src="/assets/Pars.png" alt="Pars Lab Logo" class="pars-logo" id="mainLogo" onerror="this.style.display='none'">
+      <h1 class="brand-title">PARS LAB</h1>
+    </div>
+
+    <!-- Main Terminal Card -->
+    <div class="cyber-card">
+      <div class="cyber-card-header">
+        <span class="cyber-tag">TERMINAL // OYUNCU GIRISI</span>
+      </div>
+
+      <form id="joinForm">
+        <div style="margin-bottom: 16px;">
+          <label class="pixel-text" style="font-size: 0.75rem; display: block; margin-bottom: 8px; color: var(--text-dim);">
+            ODA PIN KODU (6 HANELI)
+          </label>
+          <input type="text" id="pinInput" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="000000" autocomplete="off" required>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label class="pixel-text" style="font-size: 0.75rem; display: block; margin-bottom: 8px; color: var(--text-dim);">
+            TAKMA AD (NICKNAME)
+          </label>
+          <input type="text" id="nicknameInput" maxlength="15" placeholder="HACKER_01" autocomplete="off" required>
+        </div>
+
+        <button type="submit" id="btnJoin" class="btn btn-primary" style="width: 100%; padding: 16px;">
+          LAB'A KATIL [ ENTER ]
+        </button>
+
+        <div id="alertBox" class="alert-box"></div>
+      </form>
+
+      <div style="margin-top: 30px; border-top: 2px solid var(--border-color); padding-top: 20px; text-align: center;">
+        <p class="pixel-text" style="font-size: 0.65rem; color: var(--text-dim); margin-bottom: 12px;">
+          ÖĞRETMEN / AKILLI TAHTA MODU
+        </p>
+        <a href="/host.html" class="btn" style="width: 100%; display: block; text-decoration: none;">
+          HOST EKRANINI BAŞLAT &gt;&gt;
+        </a>
+      </div>
+    </div>
+
+    <!-- Minimalist Security Footer -->
+    <div style="margin-top: 30px; text-align: center; color: #444; font-size: 0.75rem; font-family: var(--font-mono);">
+      <p>ZERO TRUST ARCHITECTURE // OWASP STRICT // CLOUDFLARE PROXY RESOLVED</p>
+    </div>
+
+  </div>
+
+  <script>
+    const form = document.getElementById('joinForm');
+    const pinInput = document.getElementById('pinInput');
+    const nickInput = document.getElementById('nicknameInput');
+    const alertBox = document.getElementById('alertBox');
+    const btnJoin = document.getElementById('btnJoin');
+
+    // Auto-focus PIN
+    pinInput.focus();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.className = 'alert-box';
+      alertBox.style.display = 'none';
+
+      const pin = pinInput.value.trim();
+      const nickname = nickInput.value.trim();
+
+      if (!/^\d{6}$/.test(pin)) {
+        showAlert('HATA: PIN tam 6 haneli rakam olmalıdır.', 'error');
+        return;
+      }
+
+      if (!nickname || nickname.length < 2) {
+        showAlert('HATA: Takma ad en az 2 karakter olmalıdır.', 'error');
+        return;
+      }
+
+      btnJoin.disabled = true;
+      btnJoin.textContent = 'BAĞLANILIYOR...';
+
+      try {
+        // Pre-validate PIN against server rate limiter
+        const res = await fetch('/api/check-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          showAlert(data.error || 'Oda doğrulanamadı.', 'error');
+          btnJoin.disabled = false;
+          btnJoin.textContent = "LAB'A KATIL [ ENTER ]";
+          return;
+        }
+
+        // Redirect to mobile player interface with credentials
+        sessionStorage.setItem('pars_pin', pin);
+        sessionStorage.setItem('pars_nick', nickname);
+        window.location.href = `/mobile.html?pin=${encodeURIComponent(pin)}&nick=${encodeURIComponent(nickname)}`;
+
+      } catch (err) {
+        showAlert('Sunucu bağlantı hatası. Lütfen ağınızı kontrol edin.', 'error');
+        btnJoin.disabled = false;
+        btnJoin.textContent = "LAB'A KATIL [ ENTER ]";
+      }
+    });
+
+    function showAlert(msg, type) {
+      alertBox.textContent = msg;
+      alertBox.className = `alert-box alert-${type}`;
+      alertBox.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

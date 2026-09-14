@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PARS LAB // SMARTBOARD HOST</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="host-layout">
+    
+    <!-- TOP STATUS BAR -->
+    <header class="host-top-bar">
+      <div class="host-brand">
+        <img src="/assets/Pars.png" alt="Pars Lab Logo" class="pars-logo" onerror="this.style.display='none'">
+        <div>
+          <h1 class="brand-title" style="margin-top: 0; font-size: 1.4rem;">PARS LAB</h1>
+          <span class="cyber-tag" id="statusTag">HOST MODU // AKILLI TAHTA</span>
+        </div>
+      </div>
+
+      <div class="pin-display-box" id="pinBox">
+        <div class="pin-label">KATILIM PIN KODU</div>
+        <div class="pin-code" id="pinDisplay">------</div>
+      </div>
+
+      <div>
+        <span class="pixel-text" style="font-size: 0.8rem; color: var(--text-dim);">OYUNCULAR: </span>
+        <span class="pixel-text" id="playerCount" style="font-size: 1.2rem; color: var(--accent-cyan);">0</span>
+      </div>
+    </header>
+
+    <!-- SECTION 1: LOBBY -->
+    <main id="lobbySection" class="lobby-roster">
+      <div class="cyber-card" style="max-width: 850px; width: 100%; text-align: center;">
+        <h2 class="pixel-text" style="font-size: 1.3rem; margin-bottom: 12px; color: var(--accent-cyan);">
+          LOBI AKTIF // OYUNCULAR BEKLENIYOR
+        </h2>
+        <p class="mono-text" style="font-size: 1.2rem; color: var(--text-dim); margin-bottom: 20px;">
+          Öğrenciler telefonlarından veya bilgisayarlarından PIN kodunu girerek bağlanabilir.
+        </p>
+
+        <div class="player-grid" id="playerList">
+          <!-- Player badges injected here -->
+        </div>
+
+        <div style="margin-top: 24px;">
+          <button id="btnStartGame" class="btn btn-primary" style="font-size: 1.1rem; padding: 18px 40px;" disabled>
+            OYUNU BAŞLAT [ 0 OYUNCU ]
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- SECTION 2: QUESTION SCREEN -->
+    <main id="questionSection" style="display: none; flex: 1; flex-direction: column;">
+      <div class="question-header">
+        <div>
+          <span class="cyber-tag" id="qNumberTag">SORU 1 / 30</span>
+          <span class="cyber-tag" id="answerCounterTag" style="margin-left: 10px; border-color: #ffffff; color: #ffffff;">
+            CEVAP VEREN: 0 / 0
+          </span>
+        </div>
+
+        <!-- 20-Second Countdown Box -->
+        <div class="timer-box" id="timerBox">20</div>
+      </div>
+
+      <!-- Question Text (VT323 for perfect Turkish pixel text) -->
+      <div class="question-text-box" id="questionText">
+        Soru yükleniyor...
+      </div>
+
+      <!-- 4 Kahoot-Style Colored Option Boxes -->
+      <div class="answers-grid" id="answersGrid">
+        <div class="host-option-card theme-a" id="cardA">
+          <div class="opt-letter">A</div>
+          <span class="opt-text" id="textA">-</span>
+          <span class="stat-badge" id="statA" style="display: none;">0</span>
+        </div>
+        <div class="host-option-card theme-b" id="cardB">
+          <div class="opt-letter">B</div>
+          <span class="opt-text" id="textB">-</span>
+          <span class="stat-badge" id="statB" style="display: none;">0</span>
+        </div>
+        <div class="host-option-card theme-c" id="cardC">
+          <div class="opt-letter">C</div>
+          <span class="opt-text" id="textC">-</span>
+          <span class="stat-badge" id="statC" style="display: none;">0</span>
+        </div>
+        <div class="host-option-card theme-d" id="cardD">
+          <div class="opt-letter">D</div>
+          <span class="opt-text" id="textD">-</span>
+          <span class="stat-badge" id="statD" style="display: none;">0</span>
+        </div>
+      </div>
+
+      <!-- Control Bar After Question Reveal -->
+      <div id="questionControls" style="display: none; margin-top: 24px; text-align: right;">
+        <button id="btnShowLeaderboard" class="btn btn-primary" style="font-size: 1rem; padding: 14px 28px;">
+          SKOR TABLOSUNU GÖRÜNTÜLE &gt;&gt;
+        </button>
+      </div>
+    </main>
+
+    <!-- SECTION 3: LEADERBOARD SCREEN -->
+    <main id="leaderboardSection" style="display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;">
+      <div class="leaderboard-container">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 class="pixel-text" style="color: var(--accent-cyan); font-size: 1.6rem;">CANLI SKOR TABLOSU</h2>
+          <p class="mono-text" style="font-size: 1.2rem; color: var(--text-dim);" id="leaderboardSub">TOP 5 SIRALAMA</p>
+        </div>
+
+        <div id="leaderboardList">
+          <!-- Rows injected dynamically -->
+        </div>
+
+        <div style="margin-top: 30px; text-align: center;">
+          <button id="btnNextQuestion" class="btn btn-primary" style="font-size: 1.1rem; padding: 16px 36px;">
+            SONRAKİ SORU &gt;&gt;
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- SECTION 4: FINAL PODIUM -->
+    <main id="podiumSection" style="display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h1 class="pixel-text" style="font-size: 2.2rem; color: var(--accent-cyan); text-shadow: 0 0 16px var(--accent-cyan);">
+          PARS LAB // ZAFER KÜRSÜSÜ
+        </h1>
+        <p class="mono-text" style="font-size: 1.4rem; color: var(--text-dim);">OYUN TAMAMLANDI</p>
+      </div>
+
+      <div class="podium-container" id="podiumBox">
+        <!-- 2nd Place -->
+        <div class="podium-step second" id="podium2">
+          <div class="podium-rank">2</div>
+          <div class="podium-name" id="podiumName2">---</div>
+          <div class="podium-score" id="podiumScore2">0 PTS</div>
+        </div>
+        <!-- 1st Place -->
+        <div class="podium-step first" id="podium1">
+          <div class="podium-rank" style="color: var(--accent-cyan);">👑 1</div>
+          <div class="podium-name" id="podiumName1" style="color: #ffffff;">---</div>
+          <div class="podium-score" id="podiumScore1">0 PTS</div>
+        </div>
+        <!-- 3rd Place -->
+        <div class="podium-step third" id="podium3">
+          <div class="podium-rank">3</div>
+          <div class="podium-name" id="podiumName3">---</div>
+          <div class="podium-score" id="podiumScore3">0 PTS</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 30px;">
+        <button onclick="window.location.reload();" class="btn btn-primary" style="padding: 16px 32px;">
+          YENİ QUIZ BAŞLAT [ RESTART ]
+        </button>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    let socket = null;
+    let currentRoomPin = null;
+    let totalPlayersCount = 0;
+    let isLastQuestion = false;
+
+    // DOM Elements
+    const pinDisplay = document.getElementById('pinDisplay');
+    const playerCount = document.getElementById('playerCount');
+    const playerList = document.getElementById('playerList');
+    const btnStartGame = document.getElementById('btnStartGame');
+    const statusTag = document.getElementById('statusTag');
+
+    const lobbySection = document.getElementById('lobbySection');
+    const questionSection = document.getElementById('questionSection');
+    const leaderboardSection = document.getElementById('leaderboardSection');
+    const podiumSection = document.getElementById('podiumSection');
+
+    const qNumberTag = document.getElementById('qNumberTag');
+    const answerCounterTag = document.getElementById('answerCounterTag');
+    const timerBox = document.getElementById('timerBox');
+    const questionText = document.getElementById('questionText');
+    const questionControls = document.getElementById('questionControls');
+    const btnShowLeaderboard = document.getElementById('btnShowLeaderboard');
+    const btnNextQuestion = document.getElementById('btnNextQuestion');
+
+    // Create Room via Backend REST API
+    async function createRoom() {
+      try {
+        const res = await fetch('/api/rooms', { method: 'POST' });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          alert(data.error || 'Oda oluşturulamadı.');
+          return;
+        }
+
+        currentRoomPin = data.pin;
+        pinDisplay.textContent = currentRoomPin;
+        connectSocket();
+
+      } catch (err) {
+        alert('Sunucuya bağlanılamadı. Lütfen Node.js sunucusunu kontrol edin.');
+      }
+    }
+
+    function connectSocket() {
+      socket = io();
+
+      socket.on('connect', () => {
+        console.log('[HOST] Socket connected:', socket.id);
+        socket.emit('host_join_room', { pin: currentRoomPin });
+      });
+
+      socket.on('auth_error', (data) => {
+        alert('Yetkilendirme Hatası: ' + data.message);
+      });
+
+      socket.on('error_msg', (msg) => {
+        alert('Uyarı: ' + msg);
+      });
+
+      // Player joined / left
+      socket.on('player_list_updated', (data) => {
+        totalPlayersCount = data.count;
+        playerCount.textContent = totalPlayersCount;
+        btnStartGame.disabled = (totalPlayersCount === 0);
+        btnStartGame.textContent = `OYUNU BAŞLAT [ ${totalPlayersCount} OYUNCU ]`;
+
+        playerList.innerHTML = '';
+        data.players.forEach(p => {
+          const badge = document.createElement('div');
+          badge.className = 'player-badge';
+          badge.textContent = p.nickname;
+          playerList.appendChild(badge);
+        });
+      });
+
+      // Question Start
+      socket.on('host_show_question', (data) => {
+        lobbySection.style.display = 'none';
+        leaderboardSection.style.display = 'none';
+        podiumSection.style.display = 'none';
+        questionSection.style.display = 'flex';
+        questionControls.style.display = 'none';
+
+        isLastQuestion = (data.questionIndex + 1 >= data.totalQuestions);
+        qNumberTag.textContent = `SORU ${data.questionIndex + 1} / ${data.totalQuestions}`;
+        answerCounterTag.textContent = `CEVAP VEREN: 0 / ${data.totalPlayers}`;
+
+        timerBox.textContent = data.duration;
+        timerBox.classList.remove('urgent');
+
+        questionText.textContent = data.q;
+
+        // Populate options
+        document.getElementById('textA').textContent = data.options.A;
+        document.getElementById('textB').textContent = data.options.B;
+        document.getElementById('textC').textContent = data.options.C;
+        document.getElementById('textD').textContent = data.options.D;
+
+        // Reset option card visual states
+        ['A', 'B', 'C', 'D'].forEach(opt => {
+          const card = document.getElementById(`card${opt}`);
+          card.classList.remove('correct-highlight', 'dimmed');
+          const stat = document.getElementById(`stat${opt}`);
+          stat.style.display = 'none';
+          stat.textContent = '0';
+        });
+      });
+
+      // Timer Tick
+      socket.on('timer_tick', (data) => {
+        timerBox.textContent = data.remainingSeconds;
+        if (data.remainingSeconds <= 5) {
+          timerBox.classList.add('urgent');
+        }
+      });
+
+      // Real-time answer counter update
+      socket.on('host_answer_update', (data) => {
+        answerCounterTag.textContent = `CEVAP VEREN: ${data.answeredCount} / ${data.totalPlayers}`;
+      });
+
+      // Question Finished -> Reveal Correct Answer & Stats
+      socket.on('host_question_result', (data) => {
+        timerBox.textContent = '0';
+        timerBox.classList.remove('urgent');
+
+        ['A', 'B', 'C', 'D'].forEach(opt => {
+          const card = document.getElementById(`card${opt}`);
+          const stat = document.getElementById(`stat${opt}`);
+          stat.style.display = 'block';
+          stat.textContent = `${data.distribution[opt] || 0} Kişi`;
+
+          if (opt === data.correct) {
+            card.classList.add('correct-highlight');
+          } else {
+            card.classList.add('dimmed');
+          }
+        });
+
+        // Show button to proceed
+        questionControls.style.display = 'block';
+        if (isLastQuestion) {
+          btnShowLeaderboard.textContent = 'FİNAL KÜRSÜSÜNE GİT >>';
+        } else {
+          btnShowLeaderboard.textContent = 'SKOR TABLOSUNU GÖRÜNTÜLE >>';
+        }
+      });
+
+      // Leaderboard view
+      socket.on('host_leaderboard_view', (data) => {
+        questionSection.style.display = 'none';
+        leaderboardSection.style.display = 'flex';
+
+        const list = document.getElementById('leaderboardList');
+        list.innerHTML = '';
+
+        data.leaderboard.forEach((p, idx) => {
+          const row = document.createElement('div');
+          row.className = `leaderboard-row ${idx === 0 ? 'rank-1' : ''}`;
+          row.innerHTML = `
+            <div>
+              <span class="pixel-text" style="margin-right: 15px;">#${idx + 1}</span>
+              <span class="pixel-text">${p.nickname}</span>
+            </div>
+            <div class="pixel-text" style="color: var(--accent-cyan);">${p.score} PTS</div>
+          `;
+          list.appendChild(row);
+        });
+
+        if (data.questionIndex >= data.totalQuestions) {
+          btnNextQuestion.textContent = 'KÜRSÜYE GEÇİŞ YAP >>';
+        } else {
+          btnNextQuestion.textContent = 'SONRAKİ SORU >>';
+        }
+      });
+
+      // Game Over / Podium
+      socket.on('host_game_over', (data) => {
+        lobbySection.style.display = 'none';
+        questionSection.style.display = 'none';
+        leaderboardSection.style.display = 'none';
+        podiumSection.style.display = 'flex';
+
+        const p1 = data.podium[0];
+        const p2 = data.podium[1];
+        const p3 = data.podium[2];
+
+        if (p1) {
+          document.getElementById('podiumName1').textContent = p1.nickname;
+          document.getElementById('podiumScore1').textContent = `${p1.score} PTS`;
+        }
+        if (p2) {
+          document.getElementById('podiumName2').textContent = p2.nickname;
+          document.getElementById('podiumScore2').textContent = `${p2.score} PTS`;
+        }
+        if (p3) {
+          document.getElementById('podiumName3').textContent = p3.nickname;
+          document.getElementById('podiumScore3').textContent = `${p3.score} PTS`;
+        }
+      });
+    }
+
+    // Host Action Handlers
+    btnStartGame.addEventListener('click', () => {
+      if (!socket || !currentRoomPin) return;
+      socket.emit('host_next_question', { pin: currentRoomPin });
+    });
+
+    btnShowLeaderboard.addEventListener('click', () => {
+      if (!socket || !currentRoomPin) return;
+      if (isLastQuestion) {
+        socket.emit('host_end_game', { pin: currentRoomPin });
+      } else {
+        socket.emit('host_show_leaderboard', { pin: currentRoomPin });
+      }
+    });
+
+    btnNextQuestion.addEventListener('click', () => {
+      if (!socket || !currentRoomPin) return;
+      socket.emit('host_next_question', { pin: currentRoomPin });
+    });
+
+    // Start on load
+    window.addEventListener('DOMContentLoaded', createRoom);
+  </script>
+</body>
+</html>
