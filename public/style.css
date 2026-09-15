@@ -285,7 +285,185 @@ input:focus {
   letter-spacing: 6px;
 }
 
-/* Lobby View */
+/* ==========================================================================
+   HOST LOBBY WITH CATEGORY SIDEBAR
+   ========================================================================== */
+.lobby-container {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 28px;
+  align-items: stretch;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Sol Kategori Menüsü (Sidebar) */
+.category-sidebar {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  padding: 16px;
+}
+
+.sidebar-header {
+  margin-bottom: 14px;
+}
+
+.category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+/* 8-bit Dikdörtgen Kategori Blokları */
+.category-card {
+  background-color: #0c0c0c;
+  border: 2px solid var(--border-color);
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  user-select: none;
+  position: relative;
+  transition: none; /* Strict 8-bit instant retro feel */
+}
+
+/* Blokların üzerine gelindiğinde (hover) Neon Cyan renginde parlama efekti */
+.category-card:hover {
+  border-color: var(--accent-cyan);
+  background-color: #102022;
+  box-shadow: 0 0 16px var(--accent-cyan), inset 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+.category-card:hover .cat-card-title {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 8px var(--accent-cyan);
+}
+
+/* Aktif Seçili Kategori */
+.category-card.active {
+  border-color: var(--accent-cyan) !important;
+  background-color: #002222 !important;
+  box-shadow: 0 0 18px rgba(0, 255, 255, 0.8), inset 0 0 14px rgba(0, 255, 255, 0.3) !important;
+}
+
+.category-card.active .cat-card-title {
+  color: var(--accent-cyan) !important;
+  text-shadow: 0 0 8px var(--accent-cyan);
+}
+
+.category-card.active::after {
+  content: "▶ SEÇİLİ";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-family: var(--font-pixel);
+  font-size: 0.65rem;
+  color: var(--accent-cyan);
+  letter-spacing: 1px;
+  animation: blink-active 1.2s infinite steps(1);
+}
+
+@keyframes blink-active {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cat-card-title {
+  font-family: var(--font-pixel);
+  font-size: 0.85rem;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.cat-card-badge {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  border: 1px solid var(--border-color);
+  padding: 2px 6px;
+  background-color: #000000;
+}
+
+.category-card.active .cat-card-badge {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+}
+
+.cat-card-desc {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  line-height: 1.25;
+}
+
+.cat-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+.category-card.active .cat-card-footer {
+  color: #00cccc;
+}
+
+/* Sağ Taraf: Oyun Yönetim Alanı */
+.lobby-main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  max-width: none;
+  padding: 30px 40px;
+  text-align: center;
+}
+
+.active-cat-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #000000;
+  border: 2px solid var(--accent-cyan);
+  padding: 8px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.active-cat-indicator-label {
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.active-cat-indicator-name {
+  font-family: var(--font-pixel);
+  font-size: 0.95rem;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 6px var(--accent-cyan);
+}
+
+/* Lobby View Legacy Fallback */
 .lobby-roster {
   flex: 1;
   display: flex;
@@ -622,6 +800,18 @@ input:focus {
 }
 
 /* Responsive adjustments */
+@media (max-width: 992px) {
+  .lobby-container {
+    flex-direction: column;
+  }
+  .category-sidebar {
+    width: 100%;
+  }
+  .category-list {
+    max-height: 280px;
+  }
+}
+
 @media (max-width: 768px) {
   .host-layout {
     padding: 12px;

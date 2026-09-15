@@ -25,6 +25,23 @@ async function runTests() {
   const PIN = roomData.pin;
   console.log(`✓ Room created successfully! PIN: ${PIN}`);
 
+  // 1b. Test Categories REST API
+  console.log('\n[TEST 1b] Testing GET /api/categories endpoint...');
+  const catRes = await fetch(`${BASE_URL}/api/categories`);
+  const catData = await catRes.json();
+  if (!catData.success || !Array.isArray(catData.categories) || catData.categories.length !== 6) {
+    throw new Error('Categories endpoint failed! Expected 6 categories, got: ' + JSON.stringify(catData));
+  }
+  const categoryIds = catData.categories.map(c => c.id);
+  console.log('Categories found:', categoryIds.join(', '));
+  const expectedCategories = ['siber_guvenlik', 'yazilim_gelistirme', 'genel_kultur', 'ingilizce', 'din_kulturu', 'turkce'];
+  for (const expected of expectedCategories) {
+    if (!categoryIds.includes(expected)) {
+      throw new Error(`Missing expected category: ${expected}`);
+    }
+  }
+  console.log('✓ All 6 modular categories verified with 20 questions each!');
+
   // 2. Test Failed PIN 10-Attempt Ban
   console.log('\n[TEST 2] Testing Failed PIN Attempts & IP Ban (OWASP)...');
   const attackerIp = '203.0.113.99';
@@ -59,7 +76,7 @@ async function runTests() {
   console.log('✓ IP ban successfully triggered after 10 failed attempts!');
 
   // 3. Test Host & Player Sockets, Game Flow & Zero-Trust Payloads
-  console.log('\n[TEST 3] Socket Connections & Zero-Trust Payload Verification...');
+  console.log('\n[TEST 3] Socket Connections & Category Handshake...');
 
   const hostSocket = io(BASE_URL, {
     extraHeaders: { 'CF-Connecting-IP': '198.51.100.42' }
@@ -75,12 +92,15 @@ async function runTests() {
 
   // Host registers to room
   hostSocket.emit('host_join_room', { pin: PIN });
-  await new Promise((resolve) => {
+  let hostConnData = await new Promise((resolve) => {
     hostSocket.on('host_connected', (data) => {
-      if (data.pin === PIN) resolve();
+      if (data.pin === PIN) resolve(data);
     });
   });
-  console.log('✓ Host joined room successfully.');
+  if (!hostConnData.categories || hostConnData.categories.length !== 6) {
+    throw new Error('Host did not receive categories list on connect!');
+  }
+  console.log(`✓ Host joined room successfully. Default category: ${hostConnData.selectedCategory}`);
 
   // Player joins room
   playerSocket.emit('player_join_room', { pin: PIN, nickname: 'HackerPars' });
@@ -102,6 +122,17 @@ async function runTests() {
     throw new Error('Access control check failed!');
   }
   console.log('✓ Access control correctly blocked non-host action!');
+
+  // 4b. Test Category Selection via Socket.io
+  console.log('\n[TEST 4b] Testing Category Selection via host_select_category...');
+  hostSocket.emit('host_select_category', { pin: PIN, categoryId: 'siber_guvenlik' });
+  const catUpdate = await new Promise((resolve) => {
+    hostSocket.on('host_category_updated', resolve);
+  });
+  if (catUpdate.selectedCategory !== 'siber_guvenlik' || catUpdate.questionCount !== 20) {
+    throw new Error('Category update event failed: ' + JSON.stringify(catUpdate));
+  }
+  console.log(`✓ Category updated to: ${catUpdate.categoryName} (${catUpdate.questionCount} questions)`);
 
   // 5. Host Starts Question 1 -> Verify Zero-Trust Payloads
   console.log('\n[TEST 5] Verifying Question Payloads (Zero-Trust vs Host)...');
@@ -128,7 +159,12 @@ async function runTests() {
   await questionPromises;
 
   console.log('Host received question:', hostQuestionPayload.q);
+  console.log('Host question category:', hostQuestionPayload.categoryName);
+  console.log('Host total questions in pack:', hostQuestionPayload.totalQuestions);
   console.log('Host options available:', Object.keys(hostQuestionPayload.options));
+  if (hostQuestionPayload.totalQuestions !== 20) {
+    throw new Error(`Expected 20 questions in category, got: ${hostQuestionPayload.totalQuestions}`);
+  }
   if (hostQuestionPayload.correct !== undefined) {
     throw new Error('Security Breach: Host received correct answer before question end!');
   }
@@ -146,18 +182,18 @@ async function runTests() {
   }
   console.log('✓ ZERO-TRUST VERIFIED: Mobile client received ONLY action: "show_buttons" with NO text/options!');
 
-  // 6. Test Player Submits Answer
+  // 6. Test Player Submits Answer (OSI Sunum Katmanı -> A)
   console.log('\n[TEST 6] Testing Player Answer Submission & Scoring...');
-  playerSocket.emit('player_submit_answer', { pin: PIN, answer: 'B' }); // Istanbul'un fethi -> 1453 (B)
+  playerSocket.emit('player_submit_answer', { pin: PIN, answer: 'A' });
 
   await new Promise((resolve) => {
     playerSocket.on('player_answer_received', (data) => {
-      if (data.selectedAnswer === 'B') resolve();
+      if (data.selectedAnswer === 'A') resolve();
     });
   });
   console.log('✓ Answer submission acknowledged.');
 
-  // Wait for result event (since 1 player in room, answer automatically finishes question!)
+  // Wait for result event (since 1 player in room, answer finishes question)
   const [playerResult, hostResult] = await Promise.all([
     new Promise((resolve) => playerSocket.on('player_question_result', resolve)),
     new Promise((resolve) => hostSocket.on('host_question_result', resolve))
@@ -172,8 +208,8 @@ async function runTests() {
   if (playerResult.q !== undefined || playerResult.options !== undefined) {
     throw new Error('Zero trust breach in result payload!');
   }
-  if (hostResult.correct !== 'B') {
-    throw new Error('Host result wrong answer');
+  if (hostResult.correct !== 'A') {
+    throw new Error('Host result wrong answer. Expected A, got ' + hostResult.correct);
   }
   console.log(`✓ Player earned ${playerResult.earnedPoints} points!`);
 
@@ -182,7 +218,7 @@ async function runTests() {
   playerSocket.disconnect();
 
   console.log('\n===========================================');
-  console.log('ALL ZERO-TRUST & SECURITY TESTS PASSED! 🎉');
+  console.log('ALL CATEGORY & ZERO-TRUST TESTS PASSED! 🎉');
   console.log('===========================================');
   process.exit(0);
 }

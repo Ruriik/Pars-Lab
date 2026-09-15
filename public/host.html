@@ -31,12 +31,31 @@
       </div>
     </header>
 
-    <!-- SECTION 1: LOBBY -->
-    <main id="lobbySection" class="lobby-roster">
-      <div class="cyber-card" style="max-width: 850px; width: 100%; text-align: center;">
+    <!-- SECTION 1: LOBBY (SIDEBAR + GAME CONTROLS) -->
+    <main id="lobbySection" class="lobby-container">
+      <!-- SOL TARAF: DİKEY KATEGORİ MENÜSÜ (SIDEBAR) -->
+      <aside class="category-sidebar">
+        <div class="sidebar-header">
+          <span class="cyber-tag" style="display: block; text-align: center; font-size: 0.8rem; letter-spacing: 1px;">
+            KATEGORİ MENÜSÜ // SEÇİM YAPIN
+          </span>
+        </div>
+        <div class="category-list" id="categoryList">
+          <!-- 8-bit dikdörtgen kategori blokları JS ile doldurulacak -->
+        </div>
+      </aside>
+
+      <!-- SAĞ TARAF: MEVCUT OYUN YÖNETİM ALANI -->
+      <section class="lobby-main-panel cyber-card">
         <h2 class="pixel-text" style="font-size: 1.3rem; margin-bottom: 12px; color: var(--accent-cyan);">
-          LOBI AKTIF // OYUNCULAR BEKLENIYOR
+          LOBİ AKTİF // OYUNCULAR BEKLENİYOR
         </h2>
+
+        <div class="active-cat-indicator" id="activeCategoryBox">
+          <span class="active-cat-indicator-label">SEÇİLİ KATEGORİ:</span>
+          <span class="active-cat-indicator-name" id="activeCategoryName">SİBER GÜVENLİK</span>
+        </div>
+
         <p class="mono-text" style="font-size: 1.2rem; color: var(--text-dim); margin-bottom: 20px;">
           Öğrenciler telefonlarından veya bilgisayarlarından PIN kodunu girerek bağlanabilir.
         </p>
@@ -50,14 +69,17 @@
             OYUNU BAŞLAT [ 0 OYUNCU ]
           </button>
         </div>
-      </div>
+      </section>
     </main>
 
     <!-- SECTION 2: QUESTION SCREEN -->
     <main id="questionSection" style="display: none; flex: 1; flex-direction: column;">
       <div class="question-header">
         <div>
-          <span class="cyber-tag" id="qNumberTag">SORU 1 / 30</span>
+          <span class="cyber-tag" id="qNumberTag">SORU 1 / 20</span>
+          <span class="cyber-tag" id="qCategoryTag" style="margin-left: 10px; border-color: var(--accent-cyan); color: var(--accent-cyan);">
+            SİBER GÜVENLİK
+          </span>
           <span class="cyber-tag" id="answerCounterTag" style="margin-left: 10px; border-color: #ffffff; color: #ffffff;">
             CEVAP VEREN: 0 / 0
           </span>
@@ -169,6 +191,10 @@
     let totalPlayersCount = 0;
     let isLastQuestion = false;
 
+    // Categories state
+    let currentCategories = [];
+    let selectedCategoryId = 'siber_guvenlik';
+
     // DOM Elements
     const pinDisplay = document.getElementById('pinDisplay');
     const playerCount = document.getElementById('playerCount');
@@ -176,18 +202,82 @@
     const btnStartGame = document.getElementById('btnStartGame');
     const statusTag = document.getElementById('statusTag');
 
+    const categoryList = document.getElementById('categoryList');
+    const activeCategoryName = document.getElementById('activeCategoryName');
+
     const lobbySection = document.getElementById('lobbySection');
     const questionSection = document.getElementById('questionSection');
     const leaderboardSection = document.getElementById('leaderboardSection');
     const podiumSection = document.getElementById('podiumSection');
 
     const qNumberTag = document.getElementById('qNumberTag');
+    const qCategoryTag = document.getElementById('qCategoryTag');
     const answerCounterTag = document.getElementById('answerCounterTag');
     const timerBox = document.getElementById('timerBox');
     const questionText = document.getElementById('questionText');
     const questionControls = document.getElementById('questionControls');
     const btnShowLeaderboard = document.getElementById('btnShowLeaderboard');
     const btnNextQuestion = document.getElementById('btnNextQuestion');
+
+    // Render 8-Bit Category Rectangular Cards in Sidebar
+    function renderCategories(categories, activeId) {
+      currentCategories = categories || [];
+      if (activeId) selectedCategoryId = activeId;
+      categoryList.innerHTML = '';
+
+      currentCategories.forEach(cat => {
+        const card = document.createElement('div');
+        card.className = `category-card ${cat.id === selectedCategoryId ? 'active' : ''}`;
+        card.setAttribute('data-category-id', cat.id);
+
+        card.innerHTML = `
+          <div class="cat-card-header">
+            <span class="cat-card-title">${cat.name}</span>
+            <span class="cat-card-badge">${cat.badge || '9-10. SINIF'}</span>
+          </div>
+          <div class="cat-card-desc">${cat.description || ''}</div>
+          <div class="cat-card-footer">
+            <span>${cat.questionCount} SORU</span>
+            <span>MÜFREDAT UYUMLU</span>
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          selectCategory(cat.id);
+        });
+
+        categoryList.appendChild(card);
+      });
+
+      const activeCat = currentCategories.find(c => c.id === selectedCategoryId);
+      if (activeCat && activeCategoryName) {
+        activeCategoryName.textContent = activeCat.name.toUpperCase();
+      }
+    }
+
+    // Select category and notify server via Socket.io
+    function selectCategory(catId) {
+      if (selectedCategoryId === catId) return;
+      selectedCategoryId = catId;
+
+      if (socket && currentRoomPin) {
+        socket.emit('host_select_category', { pin: currentRoomPin, categoryId: catId });
+      }
+
+      // Update UI cards immediately
+      document.querySelectorAll('.category-card').forEach(c => {
+        if (c.getAttribute('data-category-id') === catId) {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+
+      const activeCat = currentCategories.find(c => c.id === catId);
+      if (activeCat && activeCategoryName) {
+        activeCategoryName.textContent = activeCat.name.toUpperCase();
+      }
+    }
 
     // Create Room via Backend REST API
     async function createRoom() {
@@ -201,6 +291,9 @@
         }
 
         currentRoomPin = data.pin;
+        if (data.selectedCategory) {
+          selectedCategoryId = data.selectedCategory;
+        }
         pinDisplay.textContent = currentRoomPin;
         connectSocket();
 
@@ -223,6 +316,28 @@
 
       socket.on('error_msg', (msg) => {
         alert('Uyarı: ' + msg);
+      });
+
+      // Host connected with initial state & categories
+      socket.on('host_connected', (data) => {
+        if (data.categories) {
+          renderCategories(data.categories, data.selectedCategory || selectedCategoryId);
+        }
+      });
+
+      // Category updated acknowledgement from server
+      socket.on('host_category_updated', (data) => {
+        selectedCategoryId = data.selectedCategory;
+        if (data.categoryName && activeCategoryName) {
+          activeCategoryName.textContent = data.categoryName.toUpperCase();
+        }
+        document.querySelectorAll('.category-card').forEach(c => {
+          if (c.getAttribute('data-category-id') === data.selectedCategory) {
+            c.classList.add('active');
+          } else {
+            c.classList.remove('active');
+          }
+        });
       });
 
       // Player joined / left
@@ -251,6 +366,9 @@
 
         isLastQuestion = (data.questionIndex + 1 >= data.totalQuestions);
         qNumberTag.textContent = `SORU ${data.questionIndex + 1} / ${data.totalQuestions}`;
+        if (data.categoryName && qCategoryTag) {
+          qCategoryTag.textContent = data.categoryName.toUpperCase();
+        }
         answerCounterTag.textContent = `CEVAP VEREN: 0 / ${data.totalPlayers}`;
 
         timerBox.textContent = data.duration;
