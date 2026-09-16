@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PARS LAB // OYUNCU KONSOLU</title>
+  <title>PARS LAB // Öğrenci Konsolu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -15,14 +18,14 @@
       <div class="mobile-brand">
         <img src="/assets/Pars.png" alt="Pars Logo" class="pars-logo" onerror="this.style.display='none'">
         <div>
-          <h1 class="brand-title" style="font-size: 1.1rem; margin-top: 0;">PARS LAB</h1>
-          <span class="pixel-text" id="statusPill" style="font-size: 0.6rem; color: var(--accent-cyan);">BAĞLANIYOR...</span>
+          <h1 class="brand-title" style="font-size: 1.15rem; margin-top: 0;">PARS LAB</h1>
+          <span id="statusPill" style="font-size: 0.72rem; font-weight: 600; color: var(--accent-light);">Bağlanıyor...</span>
         </div>
       </div>
 
       <div class="player-info-pill" id="playerTag" style="display: none;">
         <span id="playerNick">---</span>
-        <span style="color: #ffffff; margin-left: 6px;" id="playerScore">0 PTS</span>
+        <span style="color: #ffffff; margin-left: 6px; font-family: var(--font-mono);" id="playerScore">0 PTS</span>
       </div>
     </header>
 
@@ -30,23 +33,23 @@
     <main id="joinSection" style="display: none; flex: 1; flex-direction: column; justify-content: center;">
       <div class="cyber-card">
         <div class="cyber-card-header">
-          <span class="cyber-tag">OYUNCU GİRİŞİ</span>
+          <span class="cyber-tag">ÖĞRENCİ GİRİŞİ</span>
         </div>
         <form id="mobileLoginForm">
-          <div style="margin-bottom: 14px;">
-            <label class="pixel-text" style="font-size: 0.7rem; color: var(--text-dim); display: block; margin-bottom: 6px;">
-              ODA PIN
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 8px;">
+              ODA PIN KODU
             </label>
-            <input type="text" id="mPinInput" maxlength="6" inputmode="numeric" placeholder="000000" required>
+            <input type="text" id="mPinInput" maxlength="6" inputmode="numeric" placeholder="000 000" required>
           </div>
-          <div style="margin-bottom: 20px;">
-            <label class="pixel-text" style="font-size: 0.7rem; color: var(--text-dim); display: block; margin-bottom: 6px;">
-              TAKMA AD
+          <div style="margin-bottom: 24px;">
+            <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 8px;">
+              ÖĞRENCİ ADI
             </label>
-            <input type="text" id="mNickInput" maxlength="15" placeholder="OYUNCU" required>
+            <input type="text" id="mNickInput" maxlength="15" placeholder="Adınız veya Takma Ad" required>
           </div>
-          <button type="submit" id="mBtnSubmit" class="btn btn-primary" style="width: 100%;">
-            KATIL [ ENTER ]
+          <button type="submit" id="mBtnSubmit" class="btn btn-primary" style="width: 100%; padding: 14px;">
+            Odaya Katıl
           </button>
           <div id="mLoginAlert" class="alert-box"></div>
         </form>
@@ -55,22 +58,22 @@
 
     <!-- 2. LOBBY WAITING SCREEN -->
     <main id="lobbySection" class="status-screen" style="display: none;">
-      <div style="font-size: 3rem; margin-bottom: 16px;">🎮</div>
-      <h2 class="pixel-text" style="color: var(--accent-cyan);">LOBİDESİNİZ!</h2>
-      <p class="mono-text" style="font-size: 1.3rem; margin-top: 10px; color: #ffffff;">
-        Adınızı akıllı tahtada görüyor musunuz?
+      <div style="font-size: 3rem; margin-bottom: 16px;">🚀</div>
+      <h2 style="font-weight: 700; color: var(--text-primary);">Lobidesiniz!</h2>
+      <p style="font-size: 1.1rem; margin-top: 8px; color: var(--text-secondary);">
+        Adınızı akıllı tahta ekranında görebilirsiniz.
       </p>
-      <p class="mono-text" style="font-size: 1rem; color: var(--text-dim); margin-top: 15px;">
-        Host oyunu başlattığında butonlar otomatik olarak ekranınızda belirecektir.
+      <p style="font-size: 0.9rem; color: var(--text-dim); margin-top: 16px; max-width: 320px;">
+        Eğitmeniniz soruyu başlattığında cevap butonları anında ekranınızda belirecektir.
       </p>
     </main>
 
     <!-- 3. ZERO-TRUST ANSWER BUTTONS (4 BLANK COLORED BUTTONS ONLY) -->
     <!-- CRITICAL: NO QUESTION TEXT, NO OPTION TEXT IN PAYLOAD OR DOM -->
     <main id="gameSection" style="display: none; flex: 1; flex-direction: column;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span class="cyber-tag" id="mobileQNum">SORU 1</span>
-        <span class="pixel-text" style="font-size: 0.75rem; color: var(--accent-cyan);">TAHTAYA BAKIN</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
+        <span class="cyber-tag" id="mobileQNum">Soru 1</span>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-light);">Akıllı Tahtaya Odaklanın &bull;</span>
       </div>
 
       <div class="mobile-answers-grid">
@@ -83,49 +86,52 @@
 
     <!-- 4. ANSWER SUBMITTED WAITING SCREEN -->
     <main id="submittedSection" class="status-screen" style="display: none;">
-      <div style="font-size: 3rem; margin-bottom: 16px;">⏳</div>
-      <h2 class="pixel-text" style="color: var(--accent-cyan);">YANIT GÖNDERİLDİ!</h2>
-      <p class="mono-text" style="font-size: 1.3rem; margin-top: 8px;">
-        Seçilen: <span id="mySelectedChoice" class="pixel-text" style="color: var(--accent-cyan);">-</span>
+      <div style="font-size: 3rem; margin-bottom: 16px;">⚡</div>
+      <h2 style="font-weight: 700; color: var(--text-primary);">Yanıtınız İletildi!</h2>
+      <p style="font-size: 1.15rem; margin-top: 8px; color: var(--text-secondary);">
+        Seçiminiz: <span id="mySelectedChoice" style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: var(--accent-light);">-</span>
       </p>
-      <p class="mono-text" style="font-size: 1.1rem; color: var(--text-dim); margin-top: 14px;">
-        Süre bitene kadar akıllı tahtayı izleyin...
+      <p style="font-size: 0.92rem; color: var(--text-dim); margin-top: 16px;">
+        Süre dolana kadar akıllı tahtayı izleyin...
       </p>
     </main>
 
     <!-- 5. RESULT FEEDBACK SCREEN (RIGHT / WRONG) -->
     <main id="resultSection" class="status-screen" style="display: none;">
       <div id="resultIcon" style="font-size: 3.5rem; margin-bottom: 12px;">✅</div>
-      <h2 id="resultTitle" class="pixel-text">DOĞRU!</h2>
-      <div class="pixel-text" id="resultPoints" style="font-size: 1.2rem; color: var(--accent-cyan); margin-top: 8px;">
+      <h2 id="resultTitle" style="font-weight: 700;">Harika, Doğru Cevap!</h2>
+      <div id="resultPoints" style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: var(--accent-light); margin-top: 8px;">
         +0 PTS
       </div>
-      <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 14px; width: 100%;">
-        <p class="mono-text" style="font-size: 1.2rem;">
-          TOPLAM SKORUN: <span id="resultTotalScore" class="pixel-text" style="color: #ffffff;">0</span>
-        </p>
-        <p class="mono-text" style="font-size: 1.2rem; margin-top: 6px;">
-          SIRALAMA: <span id="resultRank" class="pixel-text" style="color: var(--accent-cyan);">#0</span>
-        </p>
+      <div style="margin-top: 24px; border-top: 1px solid var(--border-subtle); padding-top: 16px; width: 100%; display: flex; justify-content: space-around;">
+        <div>
+          <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Toplam Skor</span>
+          <div id="resultTotalScore" style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: #ffffff; margin-top: 2px;">0</div>
+        </div>
+        <div style="width: 1px; background: var(--border-subtle);"></div>
+        <div>
+          <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Sıralama</span>
+          <div id="resultRank" style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--accent-light); margin-top: 2px;">#0</div>
+        </div>
       </div>
     </main>
 
     <!-- 6. GAME OVER SCREEN -->
     <main id="gameOverSection" class="status-screen" style="display: none;">
       <div style="font-size: 3.5rem; margin-bottom: 16px;">🏆</div>
-      <h2 class="pixel-text" style="color: var(--accent-cyan);">OYUN TAMAMLANDI</h2>
-      <p class="mono-text" style="font-size: 1.4rem; margin-top: 14px;">
-        FİNAL SIRALAMANIZ:
+      <h2 style="font-weight: 800; color: var(--text-primary);">Quiz Tamamlandı</h2>
+      <p style="font-size: 1.05rem; margin-top: 10px; color: var(--text-secondary);">
+        Final Sıralamanız:
       </p>
-      <div class="pixel-text" id="finalRankText" style="font-size: 2.2rem; color: var(--accent-cyan); margin: 12px 0;">
+      <div id="finalRankText" style="font-family: var(--font-mono); font-size: 2.8rem; font-weight: 800; color: #fbbf24; margin: 12px 0;">
         #1
       </div>
-      <p class="mono-text" style="font-size: 1.2rem; color: #ffffff;">
-        TOPLAM PUAN: <span id="finalScoreText" class="pixel-text" style="color: var(--accent-cyan);">0</span>
+      <p style="font-size: 1.1rem; color: var(--text-secondary);">
+        Toplam Puanınız: <span id="finalScoreText" style="font-family: var(--font-mono); font-weight: 700; color: #ffffff;">0</span>
       </p>
-      <div style="margin-top: 30px;">
-        <button onclick="window.location.href='/'" class="btn btn-primary" style="width: 100%;">
-          ANA SAYFAYA DÖN
+      <div style="margin-top: 32px; width: 100%;">
+        <button onclick="window.location.href='/'" class="btn btn-primary" style="width: 100%; padding: 15px; border-radius: var(--radius-md);">
+          Ana Sayfaya Dön
         </button>
       </div>
     </main>
@@ -185,7 +191,7 @@
         } else {
           // Show manual join screen
           showSection(joinSection);
-          statusPill.textContent = 'GİRİŞ BEKLENİYOR';
+          statusPill.textContent = 'Giriş Bekleniyor';
         }
       }
     }
@@ -203,17 +209,17 @@
 
     // Connect to Socket.io
     function connectAndJoin() {
-      statusPill.textContent = 'BAĞLANILIYOR...';
+      statusPill.textContent = 'Bağlanılıyor...';
       socket = io();
 
       socket.on('connect', () => {
-        statusPill.textContent = 'KONTROL EDILIYOR...';
+        statusPill.textContent = 'Doğrulanıyor...';
         socket.emit('player_join_room', { pin: roomPin, nickname: nickname });
       });
 
       socket.on('auth_error', (data) => {
         alert(data.message);
-        statusPill.textContent = 'HATA';
+        statusPill.textContent = 'Hata';
         showSection(joinSection);
       });
 
@@ -234,7 +240,7 @@
       // Backend only emits `action: "show_buttons"`. ZERO question text or options sent!
       socket.on('player_show_buttons', (data) => {
         showSection(gameSection);
-        mobileQNum.textContent = `SORU ${data.questionIndex} / ${data.totalQuestions}`;
+        mobileQNum.textContent = `Soru ${data.questionIndex} / ${data.totalQuestions}`;
 
         // Enable all 4 colored buttons
         answerButtons.forEach(btn => {
@@ -255,7 +261,7 @@
 
         resultSection.className = `status-screen ${data.isCorrect ? 'correct' : 'wrong'}`;
         resultIcon.textContent = data.isCorrect ? '✅' : '❌';
-        resultTitle.textContent = data.isCorrect ? 'DOĞRU CEVAP!' : 'YANLIŞ CEVAP!';
+        resultTitle.textContent = data.isCorrect ? 'Doğru Cevap!' : 'Yanlış Cevap!';
         resultPoints.textContent = data.isCorrect ? `+${data.earnedPoints} PTS` : '+0 PTS';
         resultTotalScore.textContent = `${data.totalScore} PTS`;
         resultRank.textContent = `#${data.rank} / ${data.totalPlayers}`;
@@ -296,7 +302,7 @@
     // Mobile form submission (if manual login)
     document.getElementById('mobileLoginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const p = document.getElementById('mPinInput').value.trim();
+      const p = document.getElementById('mPinInput').value.trim().replace(/\s+/g, '');
       const n = document.getElementById('mNickInput').value.trim();
       const alertBox = document.getElementById('mLoginAlert');
       alertBox.style.display = 'none';

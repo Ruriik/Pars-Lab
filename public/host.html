@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PARS LAB // SMARTBOARD HOST</title>
+  <title>PARS LAB // Eğitmen & Akıllı Tahta Ekranı</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -16,18 +19,18 @@
         <img src="/assets/Pars.png" alt="Pars Lab Logo" class="pars-logo" onerror="this.style.display='none'">
         <div>
           <h1 class="brand-title" style="margin-top: 0; font-size: 1.4rem;">PARS LAB</h1>
-          <span class="cyber-tag" id="statusTag">HOST MODU // AKILLI TAHTA</span>
+          <span class="cyber-tag" id="statusTag">Eğitmen Modu // Akıllı Tahta</span>
         </div>
       </div>
 
       <div class="pin-display-box" id="pinBox">
-        <div class="pin-label">KATILIM PIN KODU</div>
+        <div class="pin-label">Katılım PIN Kodu</div>
         <div class="pin-code" id="pinDisplay">------</div>
       </div>
 
-      <div>
-        <span class="pixel-text" style="font-size: 0.8rem; color: var(--text-dim);">OYUNCULAR: </span>
-        <span class="pixel-text" id="playerCount" style="font-size: 1.2rem; color: var(--accent-cyan);">0</span>
+      <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-secondary); padding: 10px 18px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-dim);">ÖĞRENCİ:</span>
+        <span id="playerCount" style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: var(--accent-light);">0</span>
       </div>
     </header>
 
@@ -36,37 +39,37 @@
       <!-- SOL TARAF: DİKEY KATEGORİ MENÜSÜ (SIDEBAR) -->
       <aside class="category-sidebar">
         <div class="sidebar-header">
-          <span class="cyber-tag" style="display: block; text-align: center; font-size: 0.8rem; letter-spacing: 1px;">
-            KATEGORİ MENÜSÜ // SEÇİM YAPIN
+          <span class="cyber-tag">
+            Soru Paketi & Kategori Seçimi
           </span>
         </div>
         <div class="category-list" id="categoryList">
-          <!-- 8-bit dikdörtgen kategori blokları JS ile doldurulacak -->
+          <!-- Modern kart yapıları JS ile doldurulacak -->
         </div>
       </aside>
 
-      <!-- SAĞ TARAF: MEVCUT OYUN YÖNETİM ALANI -->
-      <section class="lobby-main-panel cyber-card">
-        <h2 class="pixel-text" style="font-size: 1.3rem; margin-bottom: 12px; color: var(--accent-cyan);">
-          LOBİ AKTİF // OYUNCULAR BEKLENİYOR
+      <!-- SAĞ TARAF: OYUN YÖNETİM ALANI -->
+      <section class="lobby-main-panel">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">
+          Lobi Aktif // Katılımcılar Bekleniyor
         </h2>
 
         <div class="active-cat-indicator" id="activeCategoryBox">
-          <span class="active-cat-indicator-label">SEÇİLİ KATEGORİ:</span>
+          <span class="active-cat-indicator-label">Seçili Kategori:</span>
           <span class="active-cat-indicator-name" id="activeCategoryName">SİBER GÜVENLİK</span>
         </div>
 
-        <p class="mono-text" style="font-size: 1.2rem; color: var(--text-dim); margin-bottom: 20px;">
-          Öğrenciler telefonlarından veya bilgisayarlarından PIN kodunu girerek bağlanabilir.
+        <p class="mono-text" style="font-size: 1.05rem; color: var(--text-secondary); margin-bottom: 24px; max-width: 600px;">
+          Öğrenciler telefonlarından veya tabletlerinden PIN kodunu girerek odaya katılabilirler.
         </p>
 
         <div class="player-grid" id="playerList">
           <!-- Player badges injected here -->
         </div>
 
-        <div style="margin-top: 24px;">
-          <button id="btnStartGame" class="btn btn-primary" style="font-size: 1.1rem; padding: 18px 40px;" disabled>
-            OYUNU BAŞLAT [ 0 OYUNCU ]
+        <div style="margin-top: 28px;">
+          <button id="btnStartGame" class="btn btn-primary" style="font-size: 1.05rem; padding: 16px 44px; border-radius: var(--radius-md);" disabled>
+            Oyunu Başlat [ 0 Öğrenci ]
           </button>
         </div>
       </section>
@@ -75,13 +78,13 @@
     <!-- SECTION 2: QUESTION SCREEN -->
     <main id="questionSection" style="display: none; flex: 1; flex-direction: column;">
       <div class="question-header">
-        <div>
-          <span class="cyber-tag" id="qNumberTag">SORU 1 / 20</span>
-          <span class="cyber-tag" id="qCategoryTag" style="margin-left: 10px; border-color: var(--accent-cyan); color: var(--accent-cyan);">
-            SİBER GÜVENLİK
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <span class="cyber-tag" id="qNumberTag">Soru 1 / 20</span>
+          <span class="cyber-tag" id="qCategoryTag" style="border-color: var(--accent-border); color: var(--accent-light);">
+            Siber Güvenlik
           </span>
-          <span class="cyber-tag" id="answerCounterTag" style="margin-left: 10px; border-color: #ffffff; color: #ffffff;">
-            CEVAP VEREN: 0 / 0
+          <span class="cyber-tag" id="answerCounterTag">
+            Cevap Veren: 0 / 0
           </span>
         </div>
 
@@ -89,39 +92,39 @@
         <div class="timer-box" id="timerBox">20</div>
       </div>
 
-      <!-- Question Text (VT323 for perfect Turkish pixel text) -->
+      <!-- Question Text -->
       <div class="question-text-box" id="questionText">
         Soru yükleniyor...
       </div>
 
-      <!-- 4 Kahoot-Style Colored Option Boxes -->
+      <!-- 4 Modern Colored Option Cards -->
       <div class="answers-grid" id="answersGrid">
         <div class="host-option-card theme-a" id="cardA">
           <div class="opt-letter">A</div>
           <span class="opt-text" id="textA">-</span>
-          <span class="stat-badge" id="statA" style="display: none;">0</span>
+          <span class="stat-badge" id="statA" style="display: none;">0 Kişi</span>
         </div>
         <div class="host-option-card theme-b" id="cardB">
           <div class="opt-letter">B</div>
           <span class="opt-text" id="textB">-</span>
-          <span class="stat-badge" id="statB" style="display: none;">0</span>
+          <span class="stat-badge" id="statB" style="display: none;">0 Kişi</span>
         </div>
         <div class="host-option-card theme-c" id="cardC">
           <div class="opt-letter">C</div>
           <span class="opt-text" id="textC">-</span>
-          <span class="stat-badge" id="statC" style="display: none;">0</span>
+          <span class="stat-badge" id="statC" style="display: none;">0 Kişi</span>
         </div>
         <div class="host-option-card theme-d" id="cardD">
           <div class="opt-letter">D</div>
           <span class="opt-text" id="textD">-</span>
-          <span class="stat-badge" id="statD" style="display: none;">0</span>
+          <span class="stat-badge" id="statD" style="display: none;">0 Kişi</span>
         </div>
       </div>
 
       <!-- Control Bar After Question Reveal -->
       <div id="questionControls" style="display: none; margin-top: 24px; text-align: right;">
-        <button id="btnShowLeaderboard" class="btn btn-primary" style="font-size: 1rem; padding: 14px 28px;">
-          SKOR TABLOSUNU GÖRÜNTÜLE &gt;&gt;
+        <button id="btnShowLeaderboard" class="btn btn-primary" style="font-size: 1rem; padding: 14px 32px;">
+          Skor Tablosunu Görüntüle &rarr;
         </button>
       </div>
     </main>
@@ -129,18 +132,18 @@
     <!-- SECTION 3: LEADERBOARD SCREEN -->
     <main id="leaderboardSection" style="display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;">
       <div class="leaderboard-container">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <h2 class="pixel-text" style="color: var(--accent-cyan); font-size: 1.6rem;">CANLI SKOR TABLOSU</h2>
-          <p class="mono-text" style="font-size: 1.2rem; color: var(--text-dim);" id="leaderboardSub">TOP 5 SIRALAMA</p>
+        <div style="text-align: center; margin-bottom: 28px;">
+          <h2 style="font-size: 1.8rem; font-weight: 700; color: var(--text-primary);">Canlı Sıralama Tablosu</h2>
+          <p class="mono-text" style="font-size: 1.05rem; color: var(--text-secondary); margin-top: 4px;" id="leaderboardSub">En Yüksek Puan Alan İlk 5 Öğrenci</p>
         </div>
 
         <div id="leaderboardList">
           <!-- Rows injected dynamically -->
         </div>
 
-        <div style="margin-top: 30px; text-align: center;">
-          <button id="btnNextQuestion" class="btn btn-primary" style="font-size: 1.1rem; padding: 16px 36px;">
-            SONRAKİ SORU &gt;&gt;
+        <div style="margin-top: 32px; text-align: center;">
+          <button id="btnNextQuestion" class="btn btn-primary" style="font-size: 1.05rem; padding: 16px 40px;">
+            Sonraki Soru &rarr;
           </button>
         </div>
       </div>
@@ -148,37 +151,37 @@
 
     <!-- SECTION 4: FINAL PODIUM -->
     <main id="podiumSection" style="display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 class="pixel-text" style="font-size: 2.2rem; color: var(--accent-cyan); text-shadow: 0 0 16px var(--accent-cyan);">
-          PARS LAB // ZAFER KÜRSÜSÜ
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em;">
+          Zafer Kürsüsü & Şampiyonlar
         </h1>
-        <p class="mono-text" style="font-size: 1.4rem; color: var(--text-dim);">OYUN TAMAMLANDI</p>
+        <p class="mono-text" style="font-size: 1.1rem; color: var(--text-secondary); margin-top: 6px;">Quiz Başarıyla Tamamlandı</p>
       </div>
 
       <div class="podium-container" id="podiumBox">
         <!-- 2nd Place -->
         <div class="podium-step second" id="podium2">
-          <div class="podium-rank">2</div>
+          <div class="podium-rank">🥈 2</div>
           <div class="podium-name" id="podiumName2">---</div>
           <div class="podium-score" id="podiumScore2">0 PTS</div>
         </div>
         <!-- 1st Place -->
         <div class="podium-step first" id="podium1">
-          <div class="podium-rank" style="color: var(--accent-cyan);">👑 1</div>
-          <div class="podium-name" id="podiumName1" style="color: #ffffff;">---</div>
-          <div class="podium-score" id="podiumScore1">0 PTS</div>
+          <div class="podium-rank" style="color: #fbbf24;">👑 1</div>
+          <div class="podium-name" id="podiumName1" style="color: #ffffff; font-size: 1.3rem;">---</div>
+          <div class="podium-score" id="podiumScore1" style="color: #fbbf24; font-size: 1.25rem;">0 PTS</div>
         </div>
         <!-- 3rd Place -->
         <div class="podium-step third" id="podium3">
-          <div class="podium-rank">3</div>
+          <div class="podium-rank">🥉 3</div>
           <div class="podium-name" id="podiumName3">---</div>
           <div class="podium-score" id="podiumScore3">0 PTS</div>
         </div>
       </div>
 
-      <div style="margin-top: 30px;">
-        <button onclick="window.location.reload();" class="btn btn-primary" style="padding: 16px 32px;">
-          YENİ QUIZ BAŞLAT [ RESTART ]
+      <div style="margin-top: 32px;">
+        <button onclick="window.location.reload();" class="btn btn-primary" style="padding: 16px 36px;">
+          Yeni Bir Quiz Başlat
         </button>
       </div>
     </main>
@@ -219,7 +222,7 @@
     const btnShowLeaderboard = document.getElementById('btnShowLeaderboard');
     const btnNextQuestion = document.getElementById('btnNextQuestion');
 
-    // Render 8-Bit Category Rectangular Cards in Sidebar
+    // Render Modern SaaS Category Cards in Sidebar
     function renderCategories(categories, activeId) {
       currentCategories = categories || [];
       if (activeId) selectedCategoryId = activeId;
@@ -237,8 +240,8 @@
           </div>
           <div class="cat-card-desc">${cat.description || ''}</div>
           <div class="cat-card-footer">
-            <span>${cat.questionCount} SORU</span>
-            <span>MÜFREDAT UYUMLU</span>
+            <span>${cat.questionCount} Soru</span>
+            <span>Müfredat Uyumlu</span>
           </div>
         `;
 
@@ -264,7 +267,7 @@
         socket.emit('host_select_category', { pin: currentRoomPin, categoryId: catId });
       }
 
-      // Update UI cards immediately
+      // Update UI cards immediately with smooth transitions
       document.querySelectorAll('.category-card').forEach(c => {
         if (c.getAttribute('data-category-id') === catId) {
           c.classList.add('active');
@@ -345,7 +348,7 @@
         totalPlayersCount = data.count;
         playerCount.textContent = totalPlayersCount;
         btnStartGame.disabled = (totalPlayersCount === 0);
-        btnStartGame.textContent = `OYUNU BAŞLAT [ ${totalPlayersCount} OYUNCU ]`;
+        btnStartGame.textContent = `Oyunu Başlat [ ${totalPlayersCount} Öğrenci ]`;
 
         playerList.innerHTML = '';
         data.players.forEach(p => {
@@ -365,11 +368,11 @@
         questionControls.style.display = 'none';
 
         isLastQuestion = (data.questionIndex + 1 >= data.totalQuestions);
-        qNumberTag.textContent = `SORU ${data.questionIndex + 1} / ${data.totalQuestions}`;
+        qNumberTag.textContent = `Soru ${data.questionIndex + 1} / ${data.totalQuestions}`;
         if (data.categoryName && qCategoryTag) {
-          qCategoryTag.textContent = data.categoryName.toUpperCase();
+          qCategoryTag.textContent = data.categoryName;
         }
-        answerCounterTag.textContent = `CEVAP VEREN: 0 / ${data.totalPlayers}`;
+        answerCounterTag.textContent = `Cevap Veren: 0 / ${data.totalPlayers}`;
 
         timerBox.textContent = data.duration;
         timerBox.classList.remove('urgent');
@@ -388,7 +391,7 @@
           card.classList.remove('correct-highlight', 'dimmed');
           const stat = document.getElementById(`stat${opt}`);
           stat.style.display = 'none';
-          stat.textContent = '0';
+          stat.textContent = '0 Kişi';
         });
       });
 
@@ -402,7 +405,7 @@
 
       // Real-time answer counter update
       socket.on('host_answer_update', (data) => {
-        answerCounterTag.textContent = `CEVAP VEREN: ${data.answeredCount} / ${data.totalPlayers}`;
+        answerCounterTag.textContent = `Cevap Veren: ${data.answeredCount} / ${data.totalPlayers}`;
       });
 
       // Question Finished -> Reveal Correct Answer & Stats
@@ -426,9 +429,9 @@
         // Show button to proceed
         questionControls.style.display = 'block';
         if (isLastQuestion) {
-          btnShowLeaderboard.textContent = 'FİNAL KÜRSÜSÜNE GİT >>';
+          btnShowLeaderboard.textContent = 'Final Kürsüsüne Git \u2192';
         } else {
-          btnShowLeaderboard.textContent = 'SKOR TABLOSUNU GÖRÜNTÜLE >>';
+          btnShowLeaderboard.textContent = 'Skor Tablosunu Görüntüle \u2192';
         }
       });
 
@@ -444,19 +447,19 @@
           const row = document.createElement('div');
           row.className = `leaderboard-row ${idx === 0 ? 'rank-1' : ''}`;
           row.innerHTML = `
-            <div>
-              <span class="pixel-text" style="margin-right: 15px;">#${idx + 1}</span>
-              <span class="pixel-text">${p.nickname}</span>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <span style="font-family: var(--font-mono); font-size: 1rem; color: var(--text-dim);">#${idx + 1}</span>
+              <span style="font-weight: 600;">${p.nickname}</span>
             </div>
-            <div class="pixel-text" style="color: var(--accent-cyan);">${p.score} PTS</div>
+            <div style="font-family: var(--font-mono); font-weight: 700; color: ${idx === 0 ? '#fbbf24' : 'var(--accent-light)'};">${p.score} PTS</div>
           `;
           list.appendChild(row);
         });
 
         if (data.questionIndex >= data.totalQuestions) {
-          btnNextQuestion.textContent = 'KÜRSÜYE GEÇİŞ YAP >>';
+          btnNextQuestion.textContent = 'Kürsüye Geçiş Yap \u2192';
         } else {
-          btnNextQuestion.textContent = 'SONRAKİ SORU >>';
+          btnNextQuestion.textContent = 'Sonraki Soru \u2192';
         }
       });
 
