@@ -7,28 +7,18 @@
           "name": "Matematik",
           "topics": {
             "top1": {
-              "name": "Mantık ve Kümeler",
+              "name": "Mantık, Kümeler ve Denklemler",
               "tests": {
                 "test1": {
                   "name": "TÜBİTAK Özel Sunum Testi",
                   "questions": [
                     {
-                      "q": "A = {1, 2, 3, 4} kümesinin alt küme sayısı kaçtır?",
+                      "q": "p ∨ (p ∧ q) bileşik önermesi aşağıdakilerden hangisine denktir?",
                       "options": {
-                        "A": "8",
-                        "B": "16",
-                        "C": "32",
-                        "D": "64"
-                      },
-                      "correct": "B"
-                    },
-                    {
-                      "q": "(p v p') önermesinin doğruluk değeri aşağıdakilerden hangisidir?",
-                      "options": {
-                        "A": "0",
-                        "B": "p",
-                        "C": "1",
-                        "D": "p'"
+                        "A": "1",
+                        "B": "0",
+                        "C": "p",
+                        "D": "q"
                       },
                       "correct": "C"
                     },
@@ -43,117 +33,37 @@
                       "correct": "C"
                     },
                     {
-                      "q": "A = {x | 2 < x < 7, x bir tam sayı} kümesinin eleman sayısı kaçtır?",
-                      "options": {
-                        "A": "3",
-                        "B": "4",
-                        "C": "5",
-                        "D": "6"
-                      },
-                      "correct": "B"
-                    },
-                    {
-                      "q": "A ve B ayrık iki küme olmak üzere s(A)=4, s(B)=5 ise s(A ∪ B) kaçtır?",
+                      "q": "(p ∧ q)' ∨ p bileşik önermesinin en sade hali hangisidir?",
                       "options": {
                         "A": "1",
-                        "B": "9",
-                        "C": "20",
-                        "D": "0"
-                      },
-                      "correct": "B"
-                    },
-                    {
-                      "q": "Doğruluğu ispatlanamayan ancak doğru olduğu kabul edilen önermelere ne ad verilir?",
-                      "options": {
-                        "A": "Aksiyom",
-                        "B": "Teorem",
-                        "C": "İspat",
-                        "D": "Hipotez"
+                        "B": "0",
+                        "C": "p",
+                        "D": "q'"
                       },
                       "correct": "A"
                     },
                     {
-                      "q": "p ∧ (p v q) bileşik önermesinin en sade hali hangisidir?",
+                      "q": "A = {1, 2, {3, 4}, 5} kümesi için aşağıdakilerden hangisi yanlıştır?",
                       "options": {
-                        "A": "0",
-                        "B": "1",
-                        "C": "q",
-                        "D": "p"
-                      },
-                      "correct": "D"
-                    },
-                    {
-                      "q": "Boş kümenin sembolü aşağıdakilerden hangisidir?",
-                      "options": {
-                        "A": "∞",
-                        "B": "Ø",
-                        "C": "Σ",
-                        "D": "Δ"
+                        "A": "s(A) = 4",
+                        "B": "3 ∈ A",
+                        "C": "{3, 4} ∈ A",
+                        "D": "{1, 2} ⊂ A"
                       },
                       "correct": "B"
                     },
                     {
-                      "q": "Evrensel küme (E) içinde A ∩ A' (A kesişim A'nın tümleyeni) işlemi neye eşittir?",
+                      "q": "n elemanlı bir kümenin alt küme sayısı 64 ise, bu kümenin eleman sayısı kaçtır?",
                       "options": {
-                        "A": "E",
-                        "B": "A",
-                        "C": "Ø",
-                        "D": "A'"
-                      },
-                      "correct": "C"
-                    },
-                    {
-                      "q": "s(A x B) = 12 ve s(A) = 3 olduğuna göre B kümesinin eleman sayısı kaçtır?",
-                      "options": {
-                        "A": "2",
-                        "B": "4",
-                        "C": "6",
-                        "D": "9"
-                      },
-                      "correct": "B"
-                    }
-                  ]
-                }
-              }
-            },
-            "top2": {
-              "name": "Denklemler ve Eşitsizlikler",
-              "tests": {
-                "test1": {
-                  "name": "TÜBİTAK Özel Sunum Testi",
-                  "questions": [
-                    {
-                      "q": "3x - 5 = 10 denkleminde x kaçtır?",
-                      "options": {
-                        "A": "3",
-                        "B": "5",
-                        "C": "15",
-                        "D": "2"
-                      },
-                      "correct": "B"
-                    },
-                    {
-                      "q": "|x - 2| = 5 denklemini sağlayan x değerlerinin toplamı kaçtır?",
-                      "options": {
-                        "A": "4",
-                        "B": "5",
+                        "A": "5",
+                        "B": "6",
                         "C": "7",
-                        "D": "10"
-                      },
-                      "correct": "A"
-                    },
-                    {
-                      "q": "Bir sayının 3 katının 4 fazlası 25'tir. Bu sayı kaçtır?",
-                      "options": {
-                        "A": "6",
-                        "B": "7",
-                        "C": "8",
-                        "D": "9"
+                        "D": "8"
                       },
                       "correct": "B"
                     },
                     {
-                      "q": "2x + 4 < 12 eşitsizliğini sağlayan en büyük doğal sayı kaçtır?",
+                      "q": "A ve B kümeleri için s(A ∪ B) = 15, s(A) = 8 ve s(B) = 10 ise s(A ∩ B) kaçtır?",
                       "options": {
                         "A": "2",
                         "B": "3",
@@ -163,12 +73,92 @@
                       "correct": "B"
                     },
                     {
-                      "q": "a = 2 ve b = -3 için (a - b)² ifadesinin değeri kaçtır?",
+                      "q": "Evrensel küme (E) içinde (A ∪ B)' kümesi aşağıdakilerden hangisine eşittir (De Morgan)?",
+                      "options": {
+                        "A": "A' ∪ B'",
+                        "B": "A' ∩ B'",
+                        "C": "A ∩ B",
+                        "D": "A' ∩ B"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "3x - 7 = 14 denkleminde x'in değeri kaçtır?",
+                      "options": {
+                        "A": "5",
+                        "B": "6",
+                        "C": "7",
+                        "D": "8"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "|2x - 1| = 5 denklemini sağlayan x değerlerinin toplamı kaçtır?",
                       "options": {
                         "A": "1",
-                        "B": "5",
-                        "C": "25",
-                        "D": "-1"
+                        "B": "2",
+                        "C": "3",
+                        "D": "4"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "x, y ∈ Z olmak üzere, -3 < x ≤ 4 ve -2 ≤ y < 5 olduğuna göre 2x - y ifadesinin alabileceği en büyük değer kaçtır?",
+                      "options": {
+                        "A": "8",
+                        "B": "9",
+                        "C": "10",
+                        "D": "11"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "A = {x | 1 ≤ x < 10, x asal sayı} kümesinin eleman sayısı kaçtır?",
+                      "options": {
+                        "A": "3",
+                        "B": "4",
+                        "C": "5",
+                        "D": "6"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Boş kümenin tümleyeni aşağıdakilerden hangisidir?",
+                      "options": {
+                        "A": "Ø",
+                        "B": "E (Evrensel Küme)",
+                        "C": "Kendisi",
+                        "D": "A"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "A ⊂ B olmak üzere, A ∩ B kümesi aşağıdakilerden hangisine eşittir?",
+                      "options": {
+                        "A": "A",
+                        "B": "B",
+                        "C": "Ø",
+                        "D": "E"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "(x-2)² + (y+3)² = 0 olduğuna göre x+y toplamı kaçtır?",
+                      "options": {
+                        "A": "-5",
+                        "B": "-1",
+                        "C": "1",
+                        "D": "5"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "İki basamaklı en küçük tam sayı ile en büyük negatif tam sayının toplamı kaçtır?",
+                      "options": {
+                        "A": "9",
+                        "B": "11",
+                        "C": "-100",
+                        "D": "-10"
                       },
                       "correct": "C"
                     }
@@ -182,110 +172,160 @@
           "name": "Tarih",
           "topics": {
             "top1": {
-              "name": "İnsanlığın İlk Dönemleri",
+              "name": "Tarih Bilimi ve İlk Çağlar",
               "tests": {
                 "test1": {
                   "name": "TÜBİTAK Özel Sunum Testi",
                   "questions": [
                     {
-                      "q": "Tarihte bilinen ilk yazılı antlaşma olan Kadeş Antlaşması hangi devletler arasında imzalanmıştır?",
+                      "q": "Mısırlıların icat ettiği ve resimlerden oluşan yazı türüne ne ad verilir?",
                       "options": {
-                        "A": "Mısır - Hitit",
-                        "B": "Sümer - Akad",
-                        "C": "Roma - Kartaca",
-                        "D": "Frig - Lidya"
-                      },
-                      "correct": "A"
-                    },
-                    {
-                      "q": "Tarihi devirleri başlatan 'Çivi Yazısı' hangi uygarlık tarafından icat edilmiştir?",
-                      "options": {
-                        "A": "Mısırlılar",
-                        "B": "Akadlar",
-                        "C": "Sümerler",
-                        "D": "Elamlar"
-                      },
-                      "correct": "C"
-                    },
-                    {
-                      "q": "İlk parayı bularak takas usulüne son veren Anadolu uygarlığı aşağıdakilerden hangisidir?",
-                      "options": {
-                        "A": "İyonlar",
-                        "B": "Lidyalılar",
-                        "C": "Urartular",
-                        "D": "Hititler"
+                        "A": "Çivi Yazısı",
+                        "B": "Hiyeroglif",
+                        "C": "Runik Yazı",
+                        "D": "Harf Yazısı"
                       },
                       "correct": "B"
                     },
                     {
-                      "q": "Tarihte bilinen ilk düzenli orduyu kuran Mezopotamya uygarlığı hangisidir?",
+                      "q": "Tarihte bilinen ilk yazılı antlaşma olan Kadeş Antlaşması hangi devletler arasında imzalanmıştır?",
                       "options": {
-                        "A": "Sümerler",
-                        "B": "Asurlar",
-                        "C": "Akadlar",
-                        "D": "Babiller"
+                        "A": "Mısır - Hitit",
+                        "B": "Sümer - Akad",
+                        "C": "Asur - Babil",
+                        "D": "Lidya - Frig"
                       },
-                      "correct": "C"
+                      "correct": "A"
                     },
                     {
-                      "q": "Mısır uygarlığına hayat veren, dünyanın en uzun nehri aşağıdakilerden hangisidir?",
+                      "q": "Anadolu'da kurulan uygarlıklardan hangisi parayı icat ederek takas usulüne son vermiştir?",
                       "options": {
-                        "A": "Amazon",
-                        "B": "Fırat",
-                        "C": "Dicle",
-                        "D": "Nil"
+                        "A": "Hititler",
+                        "B": "Urartular",
+                        "C": "İyonlar",
+                        "D": "Lidyalılar"
                       },
                       "correct": "D"
                     },
                     {
-                      "q": "Hititlerde kraliçeye verilen unvan aşağıdakilerden hangisidir?",
+                      "q": "Tarihte 'Ziggurat' adı verilen tapınakları inşa eden Mezopotamya uygarlığı hangisidir?",
+                      "options": {
+                        "A": "Babiller",
+                        "B": "Sümerler",
+                        "C": "Akadlar",
+                        "D": "Elamlar"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Tarih araştırmalarında olayların geçtiği dönemin şartlarına göre değerlendirilmesine ne ad verilir?",
+                      "options": {
+                        "A": "Anakronizm",
+                        "B": "Objektiflik",
+                        "C": "Kronoloji",
+                        "D": "Determinizm"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Türklerin tarih boyunca kullandığı ilk takvim aşağıdakilerden hangisidir?",
+                      "options": {
+                        "A": "Hicri Takvim",
+                        "B": "Celali Takvimi",
+                        "C": "On İki Hayvanlı Türk Takvimi",
+                        "D": "Rumi Takvim"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Friglerde tarımı korumak amacıyla öküz kesmenin veya saban kırmanın cezası neydi?",
+                      "options": {
+                        "A": "Sürgün",
+                        "B": "Hapis",
+                        "C": "Ölüm",
+                        "D": "Kırbaç"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Başkenti Tuşpa (Van) olan ve madencilikte gelişmiş Anadolu uygarlığı hangisidir?",
+                      "options": {
+                        "A": "Hititler",
+                        "B": "Lidyalılar",
+                        "C": "İyonlar",
+                        "D": "Urartular"
+                      },
+                      "correct": "D"
+                    },
+                    {
+                      "q": "Hammurabi Kanunları hangi uygarlığa aittir?",
+                      "options": {
+                        "A": "Sümer",
+                        "B": "Babil",
+                        "C": "Asur",
+                        "D": "Mısır"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Tarih biliminde geçmişte yaşanmış, başı ve sonu belli olan tekil gelişmelere ne ad verilir?",
+                      "options": {
+                        "A": "Olgu",
+                        "B": "Olay (Vaka)",
+                        "C": "Hipotez",
+                        "D": "Teori"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Anadolu'ya yazıyı getirerek Anadolu'nun tarihi devirlere girmesini sağlayan uygarlık hangisidir?",
+                      "options": {
+                        "A": "Asurlar",
+                        "B": "Sümerler",
+                        "C": "Lidyalılar",
+                        "D": "Romalılar"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "Tarihte ilk düzenli orduyu ve ilk imparatorluğu kuran Mezopotamya uygarlığı hangisidir?",
+                      "options": {
+                        "A": "Akadlar",
+                        "B": "Babiller",
+                        "C": "Elamlar",
+                        "D": "Sümerler"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "Milattan Önce (MÖ) tarihler günümüze yaklaştıkça rakamsal değeri nasıl değişir?",
+                      "options": {
+                        "A": "Büyür",
+                        "B": "Küçülür",
+                        "C": "Değişmez",
+                        "D": "Bilinemez"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Hititlerde kraliçeye verilen ve kral yokken devleti yönetme yetkisine sahip olan unvan nedir?",
                       "options": {
                         "A": "Pankuş",
                         "B": "Tavananna",
-                        "C": "Firavun",
+                        "C": "Nom",
                         "D": "Satrap"
                       },
                       "correct": "B"
                     },
                     {
-                      "q": "Tapates adı verilen dünyaca ünlü kilimleri dokuyan Anadolu uygarlığı hangisidir?",
+                      "q": "Tarihin babası olarak bilinen ve 'Historia' adlı eseri yazan Antik Yunanlı tarihçi kimdir?",
                       "options": {
-                        "A": "Frigler",
-                        "B": "Lidyalılar",
-                        "C": "İyonlar",
-                        "D": "Urartular"
+                        "A": "Thucydides",
+                        "B": "Sokrates",
+                        "C": "Herodot",
+                        "D": "Homeros"
                       },
-                      "correct": "A"
-                    },
-                    {
-                      "q": "Tarihte bilinen ilk kütüphaneyi Ninova'da kuran uygarlık hangisidir?",
-                      "options": {
-                        "A": "Sümerler",
-                        "B": "Asurlar",
-                        "C": "Babiller",
-                        "D": "Hititler"
-                      },
-                      "correct": "B"
-                    },
-                    {
-                      "q": "Ölümden sonraki yaşama inandıkları için mumyacılıkta gelişen uygarlık hangisidir?",
-                      "options": {
-                        "A": "Mısır",
-                        "B": "Sümer",
-                        "C": "Roma",
-                        "D": "Yunan"
-                      },
-                      "correct": "A"
-                    },
-                    {
-                      "q": "Göktürk Alfabesi'nden sonra Türklerin kullandığı ikinci milli alfabe hangisidir?",
-                      "options": {
-                        "A": "Arap",
-                        "B": "Uygur",
-                        "C": "Kiril",
-                        "D": "Latin"
-                      },
-                      "correct": "B"
+                      "correct": "C"
                     }
                   ]
                 }
@@ -308,54 +348,319 @@
                   "name": "TÜBİTAK Özel Sunum Testi",
                   "questions": [
                     {
-                      "q": "Elektrik devresinde akım şiddetini ölçen alet aşağıdakilerden hangisidir?",
+                      "q": "Bir iletkenin direncini ölçmek için kullanılan devre elemanı aşağıdakilerden hangisidir?",
                       "options": {
                         "A": "Voltmetre",
                         "B": "Ampermetre",
-                        "C": "Dinamometre",
-                        "D": "Termometre"
-                      },
-                      "correct": "B"
-                    },
-                    {
-                      "q": "Direnci 10 Ω olan bir iletkenden 3 Amper akım geçiyorsa iletkenin uçları arasındaki potansiyel fark kaç Volt'tur?",
-                      "options": {
-                        "A": "3",
-                        "B": "13",
-                        "C": "30",
-                        "D": "300"
+                        "C": "Ohmmetre",
+                        "D": "Galvanometre"
                       },
                       "correct": "C"
                     },
                     {
-                      "q": "Voltmetre elektrik devresine nasıl bağlanır?",
+                      "q": "Ohm Yasası'na göre (V = I.R), direnci 15 Ω olan bir telden 2 A akım geçiyorsa gerilim kaç Volt'tur?",
+                      "options": {
+                        "A": "13",
+                        "B": "17",
+                        "C": "30",
+                        "D": "45"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Elektrik devresinde Ampermetre ve Voltmetre devreye nasıl bağlanır?",
+                      "options": {
+                        "A": "İkisi de Seri",
+                        "B": "İkisi de Paralel",
+                        "C": "Ampermetre Seri, Voltmetre Paralel",
+                        "D": "Ampermetre Paralel, Voltmetre Seri"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Bir iletkenin direnci aşağıdakilerden hangisine bağlı DEĞİLDİR?",
+                      "options": {
+                        "A": "İletkenin boyuna",
+                        "B": "İletkenin kesit alanına",
+                        "C": "İletkenin cinsine",
+                        "D": "İletkenden geçen akıma"
+                      },
+                      "correct": "D"
+                    },
+                    {
+                      "q": "Dirençleri 4 Ω ve 6 Ω olan iki direnç seri bağlandığında eşdeğer direnç kaç Ω olur?",
+                      "options": {
+                        "A": "2.4",
+                        "B": "10",
+                        "C": "24",
+                        "D": "2"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Dirençleri 6 Ω ve 3 Ω olan iki direnç paralel bağlandığında eşdeğer direnç kaç Ω olur?",
+                      "options": {
+                        "A": "2",
+                        "B": "9",
+                        "C": "4.5",
+                        "D": "18"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "Elektriksel gücün (P) birimi uluslararası birim sisteminde (SI) nedir?",
+                      "options": {
+                        "A": "Joule",
+                        "B": "Watt",
+                        "C": "Volt",
+                        "D": "Newton"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Mıknatısların manyetik alan çizgileri hangi yöndedir?",
+                      "options": {
+                        "A": "S kutbundan N kutbuna",
+                        "B": "N kutbundan S kutbuna",
+                        "C": "Kutuplardan ekvatora",
+                        "D": "Merkezden dışa doğru"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Bir pusula iğnesinin N kutbu, Dünya'nın hangi manyetik kutbunu gösterir?",
+                      "options": {
+                        "A": "Manyetik Kuzey",
+                        "B": "Manyetik Güney",
+                        "C": "Coğrafi Doğu",
+                        "D": "Manyetik Ekvator"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Düz bir telden geçen elektrik akımının oluşturduğu manyetik alanın yönü hangi kuralla bulunur?",
+                      "options": {
+                        "A": "Sol El Kuralı",
+                        "B": "Sağ El Kuralı",
+                        "C": "Faraday Yasası",
+                        "D": "Lenz Yasası"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Bir devrede kısa devre oluşması durumunda eşdeğer direnç ve akım nasıl değişir?",
+                      "options": {
+                        "A": "Direnç artar, akım azalır",
+                        "B": "Direnç sıfırlanır, akım sonsuza yaklaşır",
+                        "C": "Direnç değişmez",
+                        "D": "Akım sıfırlanır"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Aynı işaretli elektrik yükleri birbirlerine nasıl bir kuvvet uygular?",
+                      "options": {
+                        "A": "Çekme",
+                        "B": "İtme",
+                        "C": "Döndürme",
+                        "D": "Kuvvet uygulamaz"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Üzerinden akım geçen bobinlerin (elektromıknatıs) manyetik alanı aşağıdakilerden hangisine bağlı değildir?",
+                      "options": {
+                        "A": "Bobinin sarım sayısına",
+                        "B": "Geçen akım şiddetine",
+                        "C": "Bobinin yapıldığı telin rengine",
+                        "D": "Bobinin uzunluğuna"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Bir evdeki tüm prizler ve ampuller tesisatta birbirine nasıl bağlanmıştır?",
                       "options": {
                         "A": "Seri",
                         "B": "Paralel",
-                        "C": "Karışık",
-                        "D": "Bağlanmaz"
+                        "C": "Karma",
+                        "D": "Yıldız"
                       },
                       "correct": "B"
                     },
                     {
-                      "q": "Elektrik akımının birimi SI birim sisteminde nedir?",
+                      "q": "Elektrik enerjisini mekanik enerjiye çeviren makinelere ne ad verilir?",
                       "options": {
-                        "A": "Volt",
-                        "B": "Joule",
-                        "C": "Amper",
-                        "D": "Ohm"
+                        "A": "Jeneratör",
+                        "B": "Elektrik Motoru",
+                        "C": "Transformatör",
+                        "D": "Dinamometre"
+                      },
+                      "correct": "B"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "biy": {
+          "name": "Biyoloji",
+          "topics": {
+            "top1": {
+              "name": "Hücre Bölünmeleri ve Kalıtım",
+              "tests": {
+                "test1": {
+                  "name": "TÜBİTAK Özel Sunum Testi",
+                  "questions": [
+                    {
+                      "q": "Hücre bölünmesi öncesinde DNA'nın kendini eşlemesi döngünün hangi evresinde gerçekleşir?",
+                      "options": {
+                        "A": "G1 Evresi",
+                        "B": "S Evresi",
+                        "C": "G2 Evresi",
+                        "D": "Mitoz Evresi"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Mitoz bölünme sonucunda ana hücreden kaç tane yeni hücre oluşur?",
+                      "options": {
+                        "A": "2",
+                        "B": "4",
+                        "C": "8",
+                        "D": "1"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "Kardeş kromatitlerin zıt kutuplara çekildiği mitoz evresi hangisidir?",
+                      "options": {
+                        "A": "Profaz",
+                        "B": "Metafaz",
+                        "C": "Anafaz",
+                        "D": "Telofaz"
                       },
                       "correct": "C"
                     },
                     {
-                      "q": "Manyetik alan çizgilerinin yönü nasıldır?",
+                      "q": "Kromozomların hücrenin ekvator düzleminde yan yana dizildiği evre hangisidir?",
                       "options": {
-                        "A": "N kutbundan S kutbuna",
-                        "B": "S kutbundan N kutbuna",
-                        "C": "Ekvatordan kutuplara",
-                        "D": "Belirsizdir"
+                        "A": "Profaz",
+                        "B": "Metafaz",
+                        "C": "Anafaz",
+                        "D": "Telofaz"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Bitki hücrelerinde sitokinez (sitoplazma bölünmesi) hangi yapının oluşumuyla gerçekleşir?",
+                      "options": {
+                        "A": "Boğumlanma",
+                        "B": "Ara lamel (Orta lamel)",
+                        "C": "Sentrozom",
+                        "D": "Kofullar"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Mayoz bölünme sonucunda oluşan üreme hücrelerinde kromozom sayısı ana hücreye göre nasıldır?",
+                      "options": {
+                        "A": "Aynıdır (2n)",
+                        "B": "İki katıdır (4n)",
+                        "C": "Yarısıdır (n)",
+                        "D": "Değişmez"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Krossing-over (parça değişimi) olayı mayoz bölünmenin hangi evresinde gerçekleşir?",
+                      "options": {
+                        "A": "Profaz I",
+                        "B": "Metafaz I",
+                        "C": "Anafaz II",
+                        "D": "Telofaz I"
                       },
                       "correct": "A"
+                    },
+                    {
+                      "q": "Homolog kromozomların zıt kutuplara ayrılması hangi bölünme evresine özgüdür?",
+                      "options": {
+                        "A": "Mitoz Anafaz",
+                        "B": "Mayoz Anafaz I",
+                        "C": "Mayoz Anafaz II",
+                        "D": "Mitoz Telofaz"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Genetiğin kurucusu sayılan ve bezelyelerle deney yapan bilim insanı kimdir?",
+                      "options": {
+                        "A": "Charles Darwin",
+                        "B": "Louis Pasteur",
+                        "C": "Gregor Mendel",
+                        "D": "James Watson"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Bir karakteri kontrol eden alellerden birinin baskın, diğerinin çekinik olduğu (Örn: Aa) genotipe ne ad verilir?",
+                      "options": {
+                        "A": "Homozigot",
+                        "B": "Heterozigot",
+                        "C": "Fenotip",
+                        "D": "Kromozom"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Aa x Aa çaprazlaması sonucunda çekinik fenotipli (aa) birey oluşma olasılığı yüzde kaçtır?",
+                      "options": {
+                        "A": "%25",
+                        "B": "%50",
+                        "C": "%75",
+                        "D": "%100"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "Kan grubu kalıtımında A ve B genlerinin birbirine üstünlük sağlayamaması durumuna ne ad verilir?",
+                      "options": {
+                        "A": "Tam baskınlık",
+                        "B": "Eksik baskınlık",
+                        "C": "Eş baskınlık",
+                        "D": "Çok alellilik"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "İnsanlarda cinsiyeti belirleyen kromozomlar erkeklerde nasıldır?",
+                      "options": {
+                        "A": "XX",
+                        "B": "YY",
+                        "C": "XY",
+                        "D": "XO"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Renk körlüğü ve hemofili hastalıkları hangi kromozom üzerinde taşınır?",
+                      "options": {
+                        "A": "Y kromozomu",
+                        "B": "X kromozomu",
+                        "C": "Otozomlar",
+                        "D": "Mitokondriyal DNA"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "DNA'nın yapısında bulunan organik bazlardan hangisi RNA'da bulunmaz?",
+                      "options": {
+                        "A": "Adenin",
+                        "B": "Guanin",
+                        "C": "Sitozin",
+                        "D": "Timin"
+                      },
+                      "correct": "D"
                     }
                   ]
                 }
@@ -372,60 +677,160 @@
           "name": "Siber Güvenlik",
           "topics": {
             "top1": {
-              "name": "Bilgi Güvenliği Temelleri",
+              "name": "Bilgi ve Ağ Güvenliği",
               "tests": {
                 "test1": {
                   "name": "TÜBİTAK Özel Sunum Testi",
                   "questions": [
                     {
-                      "q": "Bilgi güvenliğinin temel yapıtaşları olan CIA üçlüsü hangi kavramlardan oluşur?",
+                      "q": "Bilgi güvenliğinin 3 temel unsuru (CIA) aşağıdakilerden hangisidir?",
                       "options": {
                         "A": "Gizlilik, Bütünlük, Erişilebilirlik",
-                        "B": "Kimlik, Ağ, Veritabanı",
-                        "C": "Siber, Fiziksel, Mantıksal",
-                        "D": "İzleme, Kaydetme, Silme"
+                        "B": "Ağ, Sunucu, Veritabanı",
+                        "C": "Hız, Kapasite, Performans",
+                        "D": "Donanım, Yazılım, İnsan"
                       },
                       "correct": "A"
                     },
                     {
-                      "q": "Kullanıcıları manipüle ederek gizli bilgileri elde etmeye çalışan saldırı türüne ne ad verilir?",
+                      "q": "Kullanıcıları manipüle ederek, korkutarak veya kandırarak şifre gibi hassas bilgileri ele geçirmeye ne ad verilir?",
                       "options": {
-                        "A": "DDoS",
+                        "A": "SQL Injection",
                         "B": "Sosyal Mühendislik",
-                        "C": "Ransomware",
-                        "D": "SQL Injection"
+                        "C": "DDoS",
+                        "D": "Brute Force"
                       },
                       "correct": "B"
                     },
                     {
-                      "q": "Ağ trafiğini kurallara göre filtreleyen ve dış saldırılardan koruyan donanım/yazılım sistemi nedir?",
+                      "q": "Sistemi kullanılamaz hale getirmek için binlerce farklı cihazdan (botnet) aynı anda sunucuya istek atılması saldırısına ne denir?",
                       "options": {
-                        "A": "Switch",
-                        "B": "Router",
-                        "C": "Firewall (Güvenlik Duvarı)",
-                        "D": "Hub"
+                        "A": "Phishing",
+                        "B": "Keylogger",
+                        "C": "DDoS (Dağıtık Hizmet Engelleme)",
+                        "D": "Ransomware"
                       },
                       "correct": "C"
                     },
                     {
-                      "q": "Kötü amaçlı bir kişinin sahte e-postalar göndererek parola çalmasına ne denir?",
+                      "q": "İç ağ (LAN) ile dış ağ (İnternet) arasına kurulan ve trafiği kurallara göre filtreleyen güvenlik cihazı/yazılımı nedir?",
                       "options": {
-                        "A": "Phishing (Oltalama)",
-                        "B": "Keylogging",
-                        "C": "Spoofing",
-                        "D": "Sniffing"
+                        "A": "Switch",
+                        "B": "Router",
+                        "C": "Firewall (Güvenlik Duvarı)",
+                        "D": "Modem"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Verilerin yetkisiz kişilerce okunmasını engellemek için matematiksel algoritmalarla dönüştürülmesine ne ad verilir?",
+                      "options": {
+                        "A": "Sıkıştırma (Compression)",
+                        "B": "Şifreleme (Encryption)",
+                        "C": "Derleme (Compiling)",
+                        "D": "Yedekleme (Backup)"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Aşağıdakilerden hangisi geri döndürülemez bir özetleme (hashing) algoritmasıdır?",
+                      "options": {
+                        "A": "AES",
+                        "B": "RSA",
+                        "C": "DES",
+                        "D": "SHA-256"
+                      },
+                      "correct": "D"
+                    },
+                    {
+                      "q": "Bir kurbana ait dosyaları şifreleyerek açılması karşılığında kripto para talep eden zararlı yazılım türü hangisidir?",
+                      "options": {
+                        "A": "Trojan",
+                        "B": "Worm",
+                        "C": "Ransomware (Fidye Yazılımı)",
+                        "D": "Adware"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Kullanıcının haberi olmadan klavyede bastığı tüm tuşları kaydedip saldırgana gönderen yazılım nedir?",
+                      "options": {
+                        "A": "Keylogger",
+                        "B": "Rootkit",
+                        "C": "Spyware",
+                        "D": "Backdoor"
                       },
                       "correct": "A"
                     },
                     {
-                      "q": "Kullanıcının dosyalarını şifreleyip açmak için kripto para talep eden zararlı yazılım hangisidir?",
+                      "q": "Kurumların güvenlik açıklarını bulmak ve raporlamak amacıyla yetkili olarak yapılan testlere ne ad verilir?",
                       "options": {
-                        "A": "Trojan",
-                        "B": "Worm",
-                        "C": "Spyware",
-                        "D": "Ransomware (Fidye Yazılımı)"
+                        "A": "Kara Kutu Testi",
+                        "B": "Sızma Testi (Penetration Test)",
+                        "C": "Stres Testi",
+                        "D": "Kabul Testi"
                       },
-                      "correct": "D"
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Saldırganın kendini ağ üzerindeki başka biriymiş gibi göstererek (örneğin sahte IP) iletişim kurmasına ne ad verilir?",
+                      "options": {
+                        "A": "Sniffing",
+                        "B": "Spoofing (Kimlik Sahtekarlığı)",
+                        "C": "Phishing",
+                        "D": "Spam"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Kötü amaçlı kodun meşru ve masum görünen bir programın içine gizlenmesi tekniğine ne ad verilir?",
+                      "options": {
+                        "A": "Solucan (Worm)",
+                        "B": "Truva Atı (Trojan)",
+                        "C": "Virüs",
+                        "D": "Makro"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Şifre kırmak için olası tüm karakter kombinasyonlarının sırayla tek tek denendiği saldırı türü nedir?",
+                      "options": {
+                        "A": "Brute Force (Kaba Kuvvet)",
+                        "B": "Dictionary Attack",
+                        "C": "Rainbow Table",
+                        "D": "Zero-Day"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "İnternet trafiğinin şifrelenerek güvenli bir tünel üzerinden aktarılmasını sağlayan teknoloji hangisidir?",
+                      "options": {
+                        "A": "FTP",
+                        "B": "VPN (Sanal Özel Ağ)",
+                        "C": "DNS",
+                        "D": "DHCP"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Açık anahtarlı şifrelemede (Asimetrik) veri kimin anahtarıyla şifrelenirse sadece alıcının gizli anahtarıyla açılabilir?",
+                      "options": {
+                        "A": "Göndericinin Açık Anahtarı",
+                        "B": "Alıcının Açık Anahtarı",
+                        "C": "Alıcının Gizli Anahtarı",
+                        "D": "Göndericinin Gizli Anahtarı"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Web sitelerine güvenli (şifreli) bağlantı sağlamak için HTTP protokolünün üzerine eklenen katman nedir?",
+                      "options": {
+                        "A": "SSL/TLS",
+                        "B": "SSH",
+                        "C": "IPSec",
+                        "D": "TCP"
+                      },
+                      "correct": "A"
                     }
                   ]
                 }
@@ -442,60 +847,160 @@
           "name": "Yazılım Geliştirme",
           "topics": {
             "top1": {
-              "name": "Nesne Yönelimli Programlama (OOP)",
+              "name": "Nesne Yönelimli Programlama (OOP) ve Web",
               "tests": {
                 "test1": {
                   "name": "TÜBİTAK Özel Sunum Testi",
                   "questions": [
                     {
-                      "q": "OOP'de bir sınıfın başka bir sınıfın özellik ve metotlarını devralmasına ne ad verilir?",
+                      "q": "Nesne Yönelimli Programlamada (OOP) sınıftan türetilen, bellekte yer kaplayan somut varlığa ne ad verilir?",
                       "options": {
-                        "A": "Kalıtım (Inheritance)",
-                        "B": "Kapsülleme (Encapsulation)",
-                        "C": "Çok Biçimlilik (Polymorphism)",
-                        "D": "Soyutlama (Abstraction)"
+                        "A": "Class (Sınıf)",
+                        "B": "Method (Fonksiyon)",
+                        "C": "Object (Nesne)",
+                        "D": "Interface (Arayüz)"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "OOP'de bir sınıfın özelliklerinin ve davranışlarının başka bir sınıf tarafından devralınması prensibine ne denir?",
+                      "options": {
+                        "A": "Inheritance (Kalıtım)",
+                        "B": "Encapsulation (Kapsülleme)",
+                        "C": "Polymorphism (Çok Biçimlilik)",
+                        "D": "Abstraction (Soyutlama)"
                       },
                       "correct": "A"
                     },
                     {
-                      "q": "Verilerin ve fonksiyonların bir sınıf içinde gizlenip dışarıdan doğrudan erişimin engellenmesi prensibi nedir?",
+                      "q": "Sınıf içindeki değişkenlerin (verilerin) dışarıdan doğrudan erişime kapatılarak getter/setter metotlarıyla korunması hangi prensiptir?",
                       "options": {
                         "A": "Polymorphism",
-                        "B": "Encapsulation (Kapsülleme)",
+                        "B": "Inheritance",
+                        "C": "Encapsulation (Kapsülleme)",
+                        "D": "Overloading"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Aynı isimli bir metodun farklı sınıflarda farklı işlemler yapabilmesi yeteneğine OOP'de ne ad verilir?",
+                      "options": {
+                        "A": "Encapsulation",
+                        "B": "Polymorphism (Çok Biçimlilik)",
                         "C": "Inheritance",
-                        "D": "Interface"
+                        "D": "Constructor"
                       },
                       "correct": "B"
                     },
                     {
-                      "q": "Bir sınıftan türetilen canlı varlığa bellekte ne ad verilir?",
-                      "options": {
-                        "A": "Class",
-                        "B": "Method",
-                        "C": "Nesne (Object)",
-                        "D": "Property"
-                      },
-                      "correct": "C"
-                    },
-                    {
-                      "q": "Sınıf oluşturulduğunda hafızada otomatik olarak ilk çalışan ve ayarları yapan metot türü hangisidir?",
+                      "q": "Bir nesne oluşturulduğunda bellekte (RAM) otomatik olarak ilk tetiklenen ve ilk değer atamalarını yapan metoda ne ad verilir?",
                       "options": {
                         "A": "Destructor",
-                        "B": "Static",
-                        "C": "Constructor (Yapıcı)",
-                        "D": "Virtual"
+                        "B": "Static Method",
+                        "C": "Constructor (Yapıcı Metot)",
+                        "D": "Abstract Method"
                       },
                       "correct": "C"
                     },
                     {
-                      "q": "Dünya genelinde kod versiyonlamak ve takım halinde çalışmak için en çok kullanılan sistem hangisidir?",
+                      "q": "Git versiyon kontrol sisteminde yapılan değişiklikleri yerel depoya kaydetmek için hangi komut kullanılır?",
                       "options": {
-                        "A": "Git",
-                        "B": "Docker",
-                        "C": "Jenkins",
-                        "D": "Kubernetes"
+                        "A": "git pull",
+                        "B": "git commit",
+                        "C": "git push",
+                        "D": "git clone"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Yazılım geliştirmede 'LIFO (Son giren ilk çıkar)' mantığıyla çalışan veri yapısı aşağıdakilerden hangisidir?",
+                      "options": {
+                        "A": "Queue (Kuyruk)",
+                        "B": "Stack (Yığın)",
+                        "C": "Tree (Ağaç)",
+                        "D": "Linked List (Bağlı Liste)"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Hata ayıklama sürecinde programın çalışmasını belirli bir satırda duraklatıp değişkenleri incelememizi sağlayan araca ne denir?",
+                      "options": {
+                        "A": "Breakpoint",
+                        "B": "Compiler",
+                        "C": "Interpreter",
+                        "D": "Console"
                       },
                       "correct": "A"
+                    },
+                    {
+                      "q": "Veritabanından veri sorgulamak, eklemek ve silmek için kullanılan standart dil hangisidir?",
+                      "options": {
+                        "A": "HTML",
+                        "B": "XML",
+                        "C": "SQL",
+                        "D": "JSON"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Modern web geliştirmede sunucu (backend) ve istemci (frontend) arasında veri alışverişinde en çok hangi hafif format kullanılır?",
+                      "options": {
+                        "A": "XML",
+                        "B": "CSV",
+                        "C": "JSON",
+                        "D": "YAML"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Tasarım desenlerinden (Design Patterns) hangisi, bir sınıftan uygulama boyunca sadece TEK BİR nesne üretilmesini garanti eder?",
+                      "options": {
+                        "A": "Factory",
+                        "B": "Observer",
+                        "C": "Singleton",
+                        "D": "Decorator"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Bir sınıfın miras alınmasını (inherit edilmesini) tamamen engellemek için kullanılan anahtar kelime (C# / Java) genellikle hangisidir?",
+                      "options": {
+                        "A": "static",
+                        "B": "sealed / final",
+                        "C": "abstract",
+                        "D": "virtual"
+                      },
+                      "correct": "B"
+                    },
+                    {
+                      "q": "Web arayüzlerini (UI) biçimlendirmek, renklendirmek ve responsive (duyarlı) hale getirmek için kullanılan teknoloji hangisidir?",
+                      "options": {
+                        "A": "HTML",
+                        "B": "JavaScript",
+                        "C": "CSS",
+                        "D": "PHP"
+                      },
+                      "correct": "C"
+                    },
+                    {
+                      "q": "Algoritmalarda sürekli tekrar eden işlemleri kısaltmak için kullanılan yapı aşağıdakilerden hangisidir?",
+                      "options": {
+                        "A": "Döngüler (Loop)",
+                        "B": "Karar Yapıları (If/Else)",
+                        "C": "Değişkenler",
+                        "D": "Diziler (Array)"
+                      },
+                      "correct": "A"
+                    },
+                    {
+                      "q": "İki sistemin (örneğin mobil uygulama ile sunucu) birbiriyle iletişim kurmasını sağlayan yazılım arayüzlerine ne ad verilir?",
+                      "options": {
+                        "A": "IDE",
+                        "B": "API",
+                        "C": "SDK",
+                        "D": "GUI"
+                      },
+                      "correct": "B"
                     }
                   ]
                 }
