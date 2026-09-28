@@ -2,128 +2,252 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PARS LAB // Siber Güvenlik & Eğitim Platformu</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PARS LAB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=2.1">
-</head>
-<body>
-  <div style="min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px;">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    /* Mobile-only layout fixes */
+    body.mobile-layout { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); display: flex; flex-direction: column; }
+    #questionScreen.active { width: 100%; max-width: 100%; height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding: 0; }
+    .question-info-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); width: 100%; }
+    .answer-grid-flex { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px; width: 100%; background: var(--bg-root); }
+    .answer-grid-flex .answer-btn { min-height: 0; height: 100%; font-size: 4rem; border-radius: var(--r-xl); }
     
-    <!-- Modern Branding -->
-    <div class="logo-container">
-      <img src="/assets/Pars.png" alt="Pars Lab Logo" class="pars-logo" id="mainLogo" onerror="this.style.display='none'">
-      <h1 class="brand-title">PARS LAB</h1>
-    </div>
+    .host-link { margin-top: 32px; font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: color 0.2s ease; }
+    .host-link:hover { color: var(--text-primary); }
+    .host-link svg { width: 14px; height: 14px; }
+  </style>
+</head>
+<body class="mobile-layout">
 
-    <!-- Main SaaS Entry Card -->
-    <div class="cyber-card">
-      <div class="cyber-card-header">
-        <span class="cyber-tag">ÖĞRENCİ PORTALI</span>
-        <span style="font-size: 0.8rem; color: var(--text-dim); font-weight: 500;">CANLI QUIZ</span>
-      </div>
-
-      <form id="joinForm">
-        <div style="margin-bottom: 20px;">
-          <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 8px; color: var(--text-secondary); letter-spacing: 0.02em;">
-            ODA PIN KODU (6 HANELİ)
-          </label>
-          <input type="text" id="pinInput" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="000 000" autocomplete="off" required>
-        </div>
-
-        <div style="margin-bottom: 24px;">
-          <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 8px; color: var(--text-secondary); letter-spacing: 0.02em;">
-            ÖĞRENCİ / TAKMA AD
-          </label>
-          <input type="text" id="nicknameInput" maxlength="15" placeholder="Pars_User" autocomplete="off" required>
-        </div>
-
-        <button type="submit" id="btnJoin" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1rem;">
-          Laboratuvara Katıl
-        </button>
-
-        <div id="alertBox" class="alert-box"></div>
+  <!-- ═══ 1. JOIN ═══ -->
+  <div id="joinScreen" class="screen active">
+    <div class="join-card">
+      <div class="join-logo"><img src="/logo.png" alt="Logo" style="width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 0 12px var(--accent-glow)); margin-bottom: -4px;"></div>
+      <h1 class="join-title">PARS LAB</h1>
+      <p class="join-subtitle">Oyuna katılmak için PIN kodunu gir</p>
+      <form class="join-form" onsubmit="return false;">
+        <input type="text" id="pinInput" class="mobile-input" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="6 haneli PIN" autocomplete="off">
+        <input type="text" id="nickInput" class="mobile-input" maxlength="15" placeholder="Takma adın" autocomplete="off">
+        <button id="btnJoin" class="btn btn-primary"><i data-lucide="log-in"></i> Katıl</button>
       </form>
-
-      <div style="margin-top: 28px; border-top: 1px solid var(--border-subtle); padding-top: 20px; text-align: center;">
-        <p style="font-size: 0.78rem; font-weight: 600; color: var(--text-dim); margin-bottom: 12px; letter-spacing: 0.04em; text-transform: uppercase;">
-          Eğitmen / Akıllı Tahta Görünümü
-        </p>
-        <a href="/host.html" class="btn btn-secondary" style="width: 100%; display: inline-flex; text-decoration: none;">
-          Host Ekranını Başlat &rarr;
+      <p class="error-text" id="errorMsg"></p>
+      
+      <div style="text-align: center;">
+        <a href="/host.html" class="host-link">
+          <i data-lucide="shield"></i> Eğitmen Paneline Git
         </a>
       </div>
     </div>
-
   </div>
 
-  <script>
-    const form = document.getElementById('joinForm');
-    const pinInput = document.getElementById('pinInput');
-    const nickInput = document.getElementById('nicknameInput');
-    const alertBox = document.getElementById('alertBox');
-    const btnJoin = document.getElementById('btnJoin');
+  <!-- ═══ 2. WAITING ═══ -->
+  <div id="waitingScreen" class="screen">
+    <div class="waiting-content">
+      <div class="spin-icon"><i data-lucide="loader"></i></div>
+      <h2>Lobiye Katıldın!</h2>
+      <p>Öğretmenin oyunu başlatmasını bekle…</p>
+      <div class="waiting-info">
+        <span class="tag" id="waitNick">—</span>
+        <span class="tag" id="waitPin">—</span>
+      </div>
+    </div>
+  </div>
 
-    // Auto-focus PIN
-    pinInput.focus();
+  <!-- ═══ 3. QUESTION (Zero Trust: Only A/B/C/D) ═══ -->
+  <div id="questionScreen" class="screen">
+    <div class="question-info-top">
+      <span id="mobileQNum" style="font-size:0.85rem; font-weight:700; color:var(--text-secondary);">Soru 1/20</span>
+      <span class="mobile-timer" id="mobileTimer">20</span>
+    </div>
+    <div class="answer-grid-flex">
+      <button class="answer-btn btn-a" data-answer="A">A</button>
+      <button class="answer-btn btn-b" data-answer="B">B</button>
+      <button class="answer-btn btn-c" data-answer="C">C</button>
+      <button class="answer-btn btn-d" data-answer="D">D</button>
+    </div>
+  </div>
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      alertBox.className = 'alert-box';
-      alertBox.style.display = 'none';
+  <!-- ═══ 4. LOCKED ═══ -->
+  <div id="lockedScreen" class="screen">
+    <div class="status-card">
+      <div class="icon locked"><i data-lucide="lock"></i></div>
+      <h2>Cevabın Kaydedildi</h2>
+      <div class="selected-answer-display" id="lockedLetter">—</div>
+      <p>Sürenin bitmesini bekle…</p>
+    </div>
+  </div>
 
-      const pin = pinInput.value.trim().replace(/\s+/g, '');
-      const nickname = nickInput.value.trim();
+  <!-- ═══ 5. RESULT ═══ -->
+  <div id="resultScreen" class="screen">
+    <div class="status-card" id="resultCard">
+      <div class="icon" id="resultIcon"><i data-lucide="check-circle"></i></div>
+      <h2 id="resultTitle">Doğru!</h2>
+      <div class="big-score" id="earnedPts">+0</div>
+      <p>Toplam: <strong id="totalScore">0</strong> puan</p>
+      <p class="rank-text" id="rankText">Sıralaman: —</p>
+    </div>
+  </div>
 
-      if (!/^\d{6}$/.test(pin)) {
-        showAlert('Hata: PIN tam 6 haneli rakam olmalıdır.', 'error');
-        return;
-      }
+  <!-- ═══ 6. GAME OVER ═══ -->
+  <div id="gameOverScreen" class="screen">
+    <div class="status-card">
+      <div class="icon trophy"><i data-lucide="trophy"></i></div>
+      <h2>Oyun Bitti!</h2>
+      <div class="big-score" id="finalScore">0</div>
+      <p class="rank-text" id="finalRank">Sıralaman: —</p>
+      <p style="margin-top:12px; color:var(--text-tertiary); font-size:0.85rem;">Tebrikler, harika oynadın!</p>
+    </div>
+  </div>
 
-      if (!nickname || nickname.length < 2) {
-        showAlert('Hata: Takma ad en az 2 karakter olmalıdır.', 'error');
-        return;
-      }
+  <!-- ═══ 7. KICKED / DISCONNECTED ═══ -->
+  <div id="kickedScreen" class="screen">
+    <div class="status-card">
+      <div class="icon disconnected"><i data-lucide="wifi-off"></i></div>
+      <h2 id="kickedTitle">Bağlantı Kesildi</h2>
+      <p id="kickedMsg">Sunucuyla bağlantı koptu.</p>
+      <button onclick="location.reload()" class="btn btn-primary" style="margin-top:24px;">
+        <i data-lucide="rotate-ccw"></i> Tekrar Dene
+      </button>
+    </div>
+  </div>
 
-      btnJoin.disabled = true;
-      btnJoin.textContent = 'Bağlanılıyor...';
+<script>
+lucide.createIcons();
 
-      try {
-        // Pre-validate PIN against server rate limiter
-        const res = await fetch('/api/check-pin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin })
-        });
+let socket = null, myPin = '', myNick = '', answered = false;
 
-        const data = await res.json();
+const $ = id => document.getElementById(id);
+const allScreens = ['joinScreen','waitingScreen','questionScreen','lockedScreen','resultScreen','gameOverScreen','kickedScreen'];
+function show(id) {
+  allScreens.forEach(s => {
+    const el = $(s);
+    el.classList.toggle('active', s === id);
+  });
+}
 
-        if (!res.ok || !data.success) {
-          showAlert(data.error || 'Oda doğrulanamadı.', 'error');
-          btnJoin.disabled = false;
-          btnJoin.textContent = 'Laboratuvara Katıl';
-          return;
-        }
+const answerBtns = document.querySelectorAll('.answer-btn');
 
-        // Redirect to mobile player interface with credentials
-        sessionStorage.setItem('pars_pin', pin);
-        sessionStorage.setItem('pars_nick', nickname);
-        window.location.href = `/mobile.html?pin=${encodeURIComponent(pin)}&nick=${encodeURIComponent(nickname)}`;
+// ── Join ──
+$('btnJoin').onclick = () => {
+  const p = $('pinInput').value.trim();
+  const n = $('nickInput').value.trim();
+  const err = $('errorMsg');
+  err.style.display = 'none';
 
-      } catch (err) {
-        showAlert('Sunucu bağlantı hatası. Lütfen ağınızı kontrol edin.', 'error');
-        btnJoin.disabled = false;
-        btnJoin.textContent = 'Laboratuvara Katıl';
-      }
-    });
+  if (!/^\d{6}$/.test(p)) { err.textContent = 'PIN 6 haneli rakam olmalı.'; err.style.display = 'block'; return; }
+  if (n.length < 2) { err.textContent = 'Takma ad en az 2 karakter olmalı.'; err.style.display = 'block'; return; }
 
-    function showAlert(msg, type) {
-      alertBox.textContent = msg;
-      alertBox.className = `alert-box alert-${type}`;
-      alertBox.style.display = 'block';
+  $('btnJoin').disabled = true;
+  $('btnJoin').innerHTML = '<i data-lucide="loader" style="animation:spin 1s linear infinite"></i> Bağlanıyor…';
+  lucide.createIcons();
+  connectAndJoin(p, n);
+};
+
+function connectAndJoin(p, n) {
+  socket = io();
+
+  socket.on('connect', () => {
+    socket.emit('player_join_room', { pin: p, nickname: n });
+  });
+
+  socket.on('auth_error', d => {
+    show('joinScreen');
+    const err = $('errorMsg');
+    err.textContent = d.message;
+    err.style.display = 'block';
+    $('btnJoin').disabled = false;
+    $('btnJoin').innerHTML = '<i data-lucide="log-in"></i> Katıl';
+    lucide.createIcons();
+  });
+
+  socket.on('player_joined', d => {
+    myPin = d.pin; myNick = d.nickname;
+    show('waitingScreen');
+    $('waitNick').textContent = myNick;
+    $('waitPin').textContent = 'PIN: ' + myPin;
+  });
+
+  socket.on('player_show_buttons', d => {
+    show('questionScreen');
+    $('mobileQNum').textContent = `Soru ${d.questionIndex} / ${d.totalQuestions}`;
+    $('mobileTimer').textContent = d.duration;
+    $('mobileTimer').classList.remove('urgent');
+    answered = false;
+    answerBtns.forEach(b => { b.disabled = false; b.classList.remove('selected'); });
+  });
+
+  socket.on('timer_tick', d => {
+    $('mobileTimer').textContent = d.remainingSeconds;
+    if (d.remainingSeconds <= 5) $('mobileTimer').classList.add('urgent');
+  });
+
+  socket.on('player_answer_received', d => {
+    show('lockedScreen');
+    $('lockedLetter').textContent = d.selectedAnswer;
+  });
+
+  socket.on('player_question_result', d => {
+    show('resultScreen');
+    const icon = $('resultIcon');
+    if (d.isCorrect) {
+      icon.className = 'icon correct';
+      icon.innerHTML = '<i data-lucide="check-circle"></i>';
+      $('resultTitle').textContent = 'Doğru!';
+      $('resultTitle').style.color = 'var(--success)';
+    } else {
+      icon.className = 'icon incorrect';
+      icon.innerHTML = '<i data-lucide="x-circle"></i>';
+      $('resultTitle').textContent = 'Yanlış';
+      $('resultTitle').style.color = 'var(--error)';
     }
-  </script>
+    $('earnedPts').textContent = d.earnedPoints > 0 ? `+${d.earnedPoints}` : '0';
+    $('totalScore').textContent = d.totalScore;
+    $('rankText').textContent = `Sıralaman: ${d.rank}. / ${d.totalPlayers}`;
+    lucide.createIcons();
+  });
+
+  socket.on('player_leaderboard_view', d => {
+    $('rankText').textContent = `Sıralaman: ${d.rank}. / ${d.totalPlayers}`;
+  });
+
+  socket.on('player_game_over', d => {
+    show('gameOverScreen');
+    $('finalScore').textContent = d.totalScore + ' puan';
+    $('finalRank').textContent = `Sıralaman: ${d.rank}. / ${d.totalPlayers}`;
+  });
+
+  socket.on('room_closed', d => {
+    show('kickedScreen');
+    $('kickedTitle').textContent = 'Odadan Çıkarıldın';
+    $('kickedMsg').textContent = d.message || 'Oda kapatıldı.';
+    lucide.createIcons();
+  });
+
+  socket.on('disconnect', () => {
+    show('kickedScreen');
+    $('kickedTitle').textContent = 'Bağlantı Kesildi';
+    $('kickedMsg').textContent = 'Sunucuyla bağlantı koptu.';
+    lucide.createIcons();
+  });
+}
+
+// ── Answer Buttons ──
+answerBtns.forEach(btn => {
+  btn.addEventListener('click', function() {
+    if (answered) return;
+    answered = true;
+    const ans = this.dataset.answer;
+    answerBtns.forEach(b => { b.disabled = true; });
+    this.classList.add('selected');
+    socket.emit('player_submit_answer', { pin: myPin, answer: ans });
+  });
+});
+</script>
 </body>
 </html>

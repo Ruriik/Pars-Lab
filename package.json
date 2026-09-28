@@ -18,11 +18,12 @@
   "author": "Pars Lab",
   "license": "MIT",
   "dependencies": {
+    "compression": "^1.8.2",
     "express": "^4.21.2",
     "express-rate-limit": "^7.4.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.4"
   }
 }
