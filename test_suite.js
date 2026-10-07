@@ -91,7 +91,7 @@ async function runTests() {
   console.log('✓ Host and Player sockets connected.');
 
   // Host registers to room
-  hostSocket.emit('host_join_room', { pin: PIN });
+  hostSocket.emit('host_join_room', { pin: PIN, hostToken: roomData.hostToken });
   let hostConnData = await new Promise((resolve) => {
     hostSocket.on('host_connected', (data) => {
       if (data.pin === PIN) resolve(data);

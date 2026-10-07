@@ -2,387 +2,201 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07080a">
+  <meta name="description" content="PARS LAB eğitmen paneli — canlı sınıf yarışması oluştur ve yönet.">
   <title>PARS LAB — Eğitmen Paneli</title>
+  <link rel="icon" href="/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=2">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap">
+  <link rel="stylesheet" href="/css/app.css?v=3">
+  <link rel="stylesheet" href="/css/host.css?v=3">
+  <script src="/js/ui.js?v=3" defer></script>
+  <script src="/vendor/qrcode.js" defer></script>
+  <script src="/socket.io/socket.io.min.js" defer></script>
+  <script src="/js/host.js?v=3" defer></script>
 </head>
-<body class="host-layout">
+<body class="host">
+  <div class="ambient" aria-hidden="true"><span class="orb orb-1"></span><span class="orb orb-2"></span><span class="orb orb-3"></span></div>
 
-  <!-- ═══ TOP BAR ═══ -->
-  <header class="top-bar">
-    <div class="top-bar-left">
-      <img src="/logo.png" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 8px var(--accent-glow));">
-      <h1>PARS LAB</h1>
-      <span class="tag">Eğitmen Paneli</span>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/logo.png" alt="" width="36" height="36">
+      <span class="brand-name">PARS <span>LAB</span></span>
+      <span class="chip chip-gold topbar-tag">Eğitmen</span>
     </div>
-    <div class="top-bar-center">
-      <div class="pin-box">
-        <span class="pin-label">Katılım Kodu</span>
-        <span class="pin-code" id="pinDisplay">------</span>
-      </div>
-      <button type="button" class="qr-toggle" id="btnQrOpen" aria-label="QR kodunu büyüt" title="QR kodunu göster" disabled>
-        <i data-lucide="qr-code"></i>
+
+    <div class="topbar-pin">
+      <button type="button" class="pin-pill" id="pinPill" aria-label="PIN kodunu kopyala" disabled>
+        <span class="pin-pill-label">PIN</span>
+        <span class="pin-pill-code mono" id="pinTop">— — —</span>
+        <i data-icon="copy" class="icon-sm"></i>
       </button>
+      <button type="button" class="btn btn-ghost btn-icon" id="qrOpenTop" aria-label="QR kodunu büyüt" disabled><i data-icon="qr"></i></button>
     </div>
-    <div class="top-bar-right">
-      <div class="player-counter">
-        <i data-lucide="users"></i>
-        <span>Öğrenci</span>
-        <span class="count" id="playerCount">0</span>
-      </div>
+
+    <div class="topbar-right">
+      <span class="chip" id="connChip"><span class="live-dot off" id="connDot"></span><span id="connText">Bağlanıyor</span></span>
+      <span class="chip chip-brand"><i data-icon="users" class="icon-sm"></i><span class="mono" id="countTop">0</span></span>
     </div>
   </header>
 
-  <div class="host-main">
+  <main class="host-main">
 
-    <!-- ═══ LOBBY ═══ -->
-    <section id="lobbySection" class="lobby">
-
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <i data-lucide="book-open"></i>
-          <h2>Soru Bankası</h2>
+    <!-- LOBBY -->
+    <section id="hLobby" class="screen is-active lobby" aria-labelledby="lobbyTitle">
+      <aside class="panel settings" aria-labelledby="bankTitle">
+        <div class="settings-head">
+          <i data-icon="book"></i>
+          <h2 id="bankTitle">Soru Bankası</h2>
         </div>
-        <div class="sidebar-content">
-          <div class="form-group">
-            <label>Sınıf</label>
-            <select id="gradeSelect" class="select-field"><option value="">Yükleniyor…</option></select>
-          </div>
-          <div class="form-group">
-            <label>Ders</label>
-            <select id="subjectSelect" class="select-field" disabled><option value="">Önce sınıf seçin</option></select>
-          </div>
-          <div class="form-group">
-            <label>Konu</label>
-            <select id="topicSelect" class="select-field" disabled><option value="">Önce ders seçin</option></select>
-          </div>
-          <div class="form-group">
-            <label>Zorluk</label>
-            <select id="testSelect" class="select-field" disabled><option value="">Önce konu seçin</option></select>
-          </div>
-          
-          <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
-          <div class="form-group">
-            <label>Soru Süresi (Sn)</label>
-            <select id="settingDuration" class="select-field">
-              <option value="10">10 Saniye</option>
-              <option value="20" selected>20 Saniye</option>
-              <option value="30">30 Saniye</option>
-              <option value="45">45 Saniye</option>
-              <option value="60">60 Saniye</option>
-            </select>
-          </div>
-          <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-top: 4px;">
-            <input type="checkbox" id="settingAutoFinish" checked style="width: 16px; height: 16px; accent-color: var(--accent);">
-            <label for="settingAutoFinish" style="text-transform: none; font-size: 0.75rem; letter-spacing: 0;">Herkes çözünce bitir</label>
-          </div>
-          <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <input type="checkbox" id="settingAutoSkip" checked style="width: 16px; height: 16px; accent-color: var(--accent);">
-            <label for="settingAutoSkip" style="text-transform: none; font-size: 0.75rem; letter-spacing: 0;">Tabloyu 10sn'de geç</label>
-          </div>
 
-          <button id="btnApplyTest" class="btn btn-primary" disabled style="margin-top: 4px;">
-            <i data-lucide="check"></i> Testi Uygula
-          </button>
+        <div class="field">
+          <label class="field-label" for="gradeSel">Sınıf</label>
+          <div class="select-wrap"><select id="gradeSel" class="select"><option value="">Yükleniyor…</option></select><i data-icon="chevron" class="icon-sm"></i></div>
         </div>
+        <div class="field">
+          <label class="field-label" for="subSel">Ders</label>
+          <div class="select-wrap"><select id="subSel" class="select" disabled><option value="">Önce sınıf seçin</option></select><i data-icon="chevron" class="icon-sm"></i></div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="topSel">Konu</label>
+          <div class="select-wrap"><select id="topSel" class="select" disabled><option value="">Önce ders seçin</option></select><i data-icon="chevron" class="icon-sm"></i></div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="testSel">Test</label>
+          <div class="select-wrap"><select id="testSel" class="select" disabled><option value="">Önce konu seçin</option></select><i data-icon="chevron" class="icon-sm"></i></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <span class="field-label" id="durLabel">Soru süresi</span>
+          <div class="segmented" id="durationSeg" role="group" aria-labelledby="durLabel">
+            <button type="button" data-v="10" aria-pressed="false">10s</button>
+            <button type="button" data-v="20" aria-pressed="true">20s</button>
+            <button type="button" data-v="30" aria-pressed="false">30s</button>
+            <button type="button" data-v="45" aria-pressed="false">45s</button>
+            <button type="button" data-v="60" aria-pressed="false">60s</button>
+          </div>
+        </div>
+        <label class="toggle"><span>Herkes cevaplayınca bitir</span><input type="checkbox" id="optAutoFinish" checked><span class="toggle-track"></span></label>
+        <label class="toggle"><span>Skor tablosunu 10 sn&apos;de geç</span><input type="checkbox" id="optAutoSkip"><span class="toggle-track"></span></label>
+
+        <button type="button" class="btn btn-ghost btn-block" id="applyBtn" disabled><i data-icon="check"></i>Testi uygula</button>
       </aside>
 
-      <!-- Main -->
       <div class="lobby-main">
-        <div class="lobby-head">
-          <div class="lobby-head-text">
-            <h2><i data-lucide="radio"></i> Lobi Aktif</h2>
-            <div class="active-test" id="activeTestBox">
-              <i data-lucide="file-text"></i>
-              <span id="activeTestName">Test seçilmedi</span>
-            </div>
-            <p class="lobby-info">Öğrenciler QR kodu telefon kamerasıyla okutarak ya da PIN kodunu girerek katılabilirler. Uygunsuz isimleri X butonuyla atabilirsiniz.</p>
+        <div class="panel panel-glow hero">
+          <div class="hero-text">
+            <span class="eyebrow"><span class="live-dot"></span>Lobi açık</span>
+            <h1 id="lobbyTitle" class="hero-title">Katılmak için <span class="mono hero-url" id="joinHost">—</span> adresine git</h1>
+            <div class="pin-digits mono" id="pinDigits" aria-label="Oyun PIN'i"></div>
+            <div class="active-test"><i data-icon="sparkles" class="icon-sm"></i><span id="activeTest">Test yükleniyor…</span></div>
           </div>
-          <button type="button" class="qr-card" id="btnQrCard" aria-label="QR kodunu tam ekran göster">
-            <div class="qr-image" id="qrLobby" aria-hidden="true"></div>
-            <span class="qr-caption"><i data-lucide="scan-line"></i> Okut ve katıl</span>
+          <button type="button" class="qr-card" id="qrOpenCard" aria-label="QR kodunu tam ekran göster">
+            <span class="qr" id="qrSmall"></span>
+            <span class="qr-caption"><i data-icon="expand" class="icon-sm"></i>Okut ve katıl</span>
           </button>
         </div>
-        <div class="player-grid" id="playerList"></div>
-        <div style="margin-top: auto; padding-top: 16px;">
-          <button id="btnStartGame" class="btn btn-primary" disabled>
-            <i data-lucide="play"></i> Oyunu Başlat
-          </button>
+
+        <div class="players-head">
+          <h2><i data-icon="users"></i>Oyuncular <span class="chip mono" id="countLobby">0</span></h2>
+          <button type="button" class="btn btn-gold btn-lg" id="startBtn" disabled><i data-icon="play"></i>Oyunu başlat</button>
+        </div>
+
+        <div class="player-grid" id="playerGrid" aria-live="polite"></div>
+        <div class="empty" id="emptyPlayers">
+          <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+          <p>Oyuncular bekleniyor…</p>
         </div>
       </div>
     </section>
 
-    <!-- ═══ QUESTION ═══ -->
-    <section id="questionSection" class="question-view" style="display:none;">
-      <div class="question-topbar">
-        <div class="question-tags">
-          <span class="tag" id="qNumTag">Soru 1 / 20</span>
-          <span class="tag" id="qCatTag">Test</span>
-          <span class="tag" id="qAnswerTag">Cevap: 0 / 0</span>
+    <!-- QUESTION -->
+    <section id="hQuestion" class="screen question" aria-labelledby="qText">
+      <div class="progress" aria-hidden="true"><span id="qProgress"></span></div>
+      <div class="q-top">
+        <div class="q-tags">
+          <span class="chip chip-gold mono" id="qNum">Soru 1 / 10</span>
+          <span class="chip q-cat" id="qCat">—</span>
         </div>
-        <div class="timer-display" id="timerDisplay">20</div>
-      </div>
-      <div class="question-text" id="questionText">Soru yükleniyor…</div>
-      <div class="options-grid">
-        <div class="option-card opt-a" id="cardA"><div class="opt-letter">A</div><span class="opt-text" id="textA">—</span><span class="stat-badge" id="statA">0</span></div>
-        <div class="option-card opt-b" id="cardB"><div class="opt-letter">B</div><span class="opt-text" id="textB">—</span><span class="stat-badge" id="statB">0</span></div>
-        <div class="option-card opt-c" id="cardC"><div class="opt-letter">C</div><span class="opt-text" id="textC">—</span><span class="stat-badge" id="statC">0</span></div>
-        <div class="option-card opt-d" id="cardD"><div class="opt-letter">D</div><span class="opt-text" id="textD">—</span><span class="stat-badge" id="statD">0</span></div>
-      </div>
-      <div class="question-controls" id="questionControls">
-        <button id="btnShowLeaderboard" class="btn btn-primary">Skor Tablosu &rarr;</button>
-      </div>
-    </section>
-
-    <!-- ═══ LEADERBOARD ═══ -->
-    <section id="leaderboardSection" class="leaderboard-view" style="display:none;">
-      <div class="leaderboard-card">
-        <div class="leaderboard-title"><i data-lucide="trophy"></i> Sıralama</div>
-        <div class="leaderboard-list" id="leaderboardList"></div>
-        <div style="text-align:center; margin-top: 28px;">
-          <button id="btnNextQuestion" class="btn btn-primary">Sonraki Soru &rarr;</button>
+        <div class="answered">
+          <span class="answered-value mono" id="qAnswered">0</span>
+          <span class="answered-label">cevap / <span class="mono" id="qTotal">0</span></span>
+        </div>
+        <div class="timer timer-lg" id="hTimer">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46"/><circle class="bar" cx="50" cy="50" r="46"/></svg>
+          <span class="timer-value">20</span>
         </div>
       </div>
+
+      <h2 class="q-text" id="qText">—</h2>
+
+      <div class="options" id="options">
+        <div class="option gem-a" data-opt="A"><span class="opt-shape"><i data-icon="shape-a"></i></span><span class="opt-text" id="oA">—</span><span class="opt-stat mono" id="sA">0</span><span class="opt-bar" id="bA"></span></div>
+        <div class="option gem-b" data-opt="B"><span class="opt-shape"><i data-icon="shape-b"></i></span><span class="opt-text" id="oB">—</span><span class="opt-stat mono" id="sB">0</span><span class="opt-bar" id="bB"></span></div>
+        <div class="option gem-c" data-opt="C"><span class="opt-shape"><i data-icon="shape-c"></i></span><span class="opt-text" id="oC">—</span><span class="opt-stat mono" id="sC">0</span><span class="opt-bar" id="bC"></span></div>
+        <div class="option gem-d" data-opt="D"><span class="opt-shape"><i data-icon="shape-d"></i></span><span class="opt-text" id="oD">—</span><span class="opt-stat mono" id="sD">0</span><span class="opt-bar" id="bD"></span></div>
+      </div>
+
+      <div class="q-actions">
+        <button type="button" class="btn btn-ghost" id="skipBtn"><i data-icon="skip"></i>Süreyi bitir</button>
+        <button type="button" class="btn btn-primary btn-lg" id="boardBtn" hidden><i data-icon="trophy"></i>Skor tablosu</button>
+      </div>
     </section>
 
-    <!-- ═══ PODIUM ═══ -->
-    <section id="podiumSection" class="podium-view" style="display:none;">
-      <div class="podium-title">🏆 Zafer Kürsüsü</div>
-      <div class="podium-container">
-        <div class="podium-step second"><div class="podium-rank">🥈</div><div class="podium-name" id="podName2">—</div><div class="podium-score" id="podScore2">0</div></div>
-        <div class="podium-step first"><div class="podium-rank">👑</div><div class="podium-name" id="podName1">—</div><div class="podium-score" id="podScore1">0</div></div>
-        <div class="podium-step third"><div class="podium-rank">🥉</div><div class="podium-name" id="podName3">—</div><div class="podium-score" id="podScore3">0</div></div>
+    <!-- LEADERBOARD -->
+    <section id="hBoard" class="screen board" aria-labelledby="boardTitle">
+      <div class="board-wrap">
+        <span class="eyebrow" id="boardEyebrow">Soru 1 / 10 sonrası</span>
+        <h2 id="boardTitle" class="section-title">Sıralama</h2>
+        <ol class="board-list" id="boardList"></ol>
+        <div class="board-actions">
+          <div class="autoskip" id="autoSkipBar" hidden><span></span></div>
+          <button type="button" class="btn btn-ghost" id="endBtn"><i data-icon="flag"></i>Oyunu bitir</button>
+          <button type="button" class="btn btn-primary btn-lg" id="nextBtn"><i data-icon="arrow-right"></i>Sonraki soru</button>
+        </div>
       </div>
-      <button onclick="location.reload()" class="btn btn-primary"><i data-lucide="rotate-ccw"></i> Yeni Quiz</button>
     </section>
-  </div>
 
-  <!-- ═══ QR OVERLAY ═══ -->
-  <div class="qr-overlay" id="qrOverlay" role="dialog" aria-modal="true" aria-labelledby="qrOverlayTitle" hidden>
-    <div class="qr-overlay-card">
-      <button type="button" class="qr-close" id="btnQrClose" aria-label="Kapat"><i data-lucide="x"></i></button>
-      <h2 id="qrOverlayTitle">Telefonunla okut, oyuna katıl</h2>
-      <div class="qr-image qr-image-lg" id="qrLarge" aria-hidden="true"></div>
-      <div class="qr-overlay-pin">
-        <span class="pin-label">PIN</span>
-        <span class="pin-code" id="qrOverlayPin">------</span>
+    <!-- PODIUM -->
+    <section id="hPodium" class="screen podium" aria-labelledby="podiumTitle">
+      <span class="eyebrow">Final</span>
+      <h2 id="podiumTitle" class="section-title">Zafer Kürsüsü</h2>
+      <div class="podium-stage">
+        <div class="step step-2"><div class="step-avatar mono" id="pAv2">2</div><div class="step-name" id="pName2">—</div><div class="step-score mono" id="pScore2">0</div><div class="step-block"><span>2</span></div></div>
+        <div class="step step-1"><i data-icon="crown" class="icon-lg crown"></i><div class="step-avatar mono" id="pAv1">1</div><div class="step-name" id="pName1">—</div><div class="step-score mono" id="pScore1">0</div><div class="step-block"><span>1</span></div></div>
+        <div class="step step-3"><div class="step-avatar mono" id="pAv3">3</div><div class="step-name" id="pName3">—</div><div class="step-score mono" id="pScore3">0</div><div class="step-block"><span>3</span></div></div>
       </div>
-      <p class="qr-url" id="qrUrl"></p>
+      <ol class="rest-list" id="restList"></ol>
+      <button type="button" class="btn btn-gold btn-lg" id="newGameBtn"><i data-icon="rotate"></i>Yeni yarışma</button>
+    </section>
+  </main>
+
+  <!-- QR dialog -->
+  <div class="dialog" id="qrDialog" role="dialog" aria-modal="true" aria-labelledby="qrTitle" hidden>
+    <div class="dialog-card qr-dialog">
+      <button type="button" class="btn btn-ghost btn-icon dialog-close" id="qrClose" aria-label="Kapat"><i data-icon="x"></i></button>
+      <span class="eyebrow">Hızlı katılım</span>
+      <h2 id="qrTitle" class="section-title">Telefonunla okut</h2>
+      <div class="qr qr-lg" id="qrLarge"></div>
+      <div class="pin-digits mono pin-digits-sm" id="pinDigitsLg"></div>
+      <p class="qr-url mono" id="qrUrl"></p>
     </div>
   </div>
 
-<script>
-lucide.createIcons();
-
-let socket = null, pin = null, players = 0, lastQ = false;
-let db = {}, sel = { gradeId:'', subId:'', topId:'', testId:'' };
-
-const $ = id => document.getElementById(id);
-const sections = ['lobbySection','questionSection','leaderboardSection','podiumSection'];
-function show(id) { sections.forEach(s => $(s).style.display = s===id ? '' : 'none'); }
-
-// ── Dropdowns ──
-function fillSelect(el, ph, map) {
-  el.innerHTML = `<option value="">${ph}</option>`;
-  Object.entries(map).forEach(([k,v]) => {
-    const o = document.createElement('option');
-    o.value = k;
-    o.textContent = v.name + (v.questionCount ? ` (${v.questionCount} soru)` : '');
-    el.appendChild(o);
-  });
-  el.disabled = false;
-}
-function initDropdowns() {
-  const g = $('gradeSelect'), s = $('subjectSelect'), t = $('topicSelect'), te = $('testSelect'), btn = $('btnApplyTest');
-  fillSelect(g, 'Sınıf seçin', db);
-  g.onchange = () => {
-    sel.gradeId = g.value; sel.subId=''; sel.topId=''; sel.testId='';
-    if (!sel.gradeId) { s.disabled=t.disabled=te.disabled=true; btn.disabled=true; return; }
-    fillSelect(s, 'Ders seçin', db[sel.gradeId].subjects);
-    t.disabled=te.disabled=true; btn.disabled=true;
-  };
-  s.onchange = () => {
-    sel.subId = s.value; sel.topId=''; sel.testId='';
-    if (!sel.subId) { t.disabled=te.disabled=true; btn.disabled=true; return; }
-    fillSelect(t, 'Konu seçin', db[sel.gradeId].subjects[sel.subId].topics);
-    te.disabled=true; btn.disabled=true;
-  };
-  t.onchange = () => {
-    sel.topId = t.value; sel.testId='';
-    if (!sel.topId) { te.disabled=true; btn.disabled=true; return; }
-    fillSelect(te, 'Zorluk seçin', db[sel.gradeId].subjects[sel.subId].topics[sel.topId].tests);
-    btn.disabled=true;
-  };
-  te.onchange = () => { sel.testId = te.value; btn.disabled = !sel.testId; };
-}
-
-$('btnApplyTest').onclick = () => {
-  if (socket && pin && sel.testId) {
-    const settings = {
-      questionDuration: $('settingDuration').value,
-      autoFinish: $('settingAutoFinish').checked,
-      autoSkipLeaderboard: $('settingAutoSkip').checked
-    };
-    socket.emit('host_select_category', { pin, selectedPath: sel, settings });
-  }
-};
-
-// ── Room ──
-async function createRoom() {
-  try {
-    const res = await fetch('/api/rooms', { method:'POST' });
-    const d = await res.json();
-    if (!d.success) return alert(d.error);
-    pin = d.pin;
-    $('pinDisplay').textContent = pin;
-    renderQr();
-    connect();
-  } catch(e) { alert('Sunucu bağlantı hatası'); }
-}
-
-// ── QR ──
-function renderQr() {
-  const joinUrl = `${location.origin}/?pin=${encodeURIComponent(pin)}`;
-  const qr = qrcode(0, 'M');
-  qr.addData(joinUrl);
-  qr.make();
-  const svg = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  $('qrLobby').innerHTML = svg;
-  $('qrLarge').innerHTML = svg;
-  $('qrOverlayPin').textContent = pin;
-  $('qrUrl').textContent = joinUrl.replace(/^https?:\/\//, '');
-  $('btnQrOpen').disabled = false;
-}
-
-function openQr() {
-  if (!pin) return;
-  $('qrOverlay').hidden = false;
-  $('btnQrClose').focus();
-}
-function closeQr() {
-  $('qrOverlay').hidden = true;
-}
-$('btnQrOpen').onclick = openQr;
-$('btnQrCard').onclick = openQr;
-$('btnQrClose').onclick = closeQr;
-$('qrOverlay').onclick = e => { if (e.target === $('qrOverlay')) closeQr(); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('qrOverlay').hidden) closeQr(); });
-
-function connect() {
-  socket = io();
-  socket.on('connect', () => socket.emit('host_join_room', { pin }));
-  socket.on('error_msg', m => alert(m));
-
-  socket.on('host_connected', d => {
-    db = d.categories || {};
-    initDropdowns();
-    if (d.categoryName) $('activeTestName').textContent = d.categoryName;
-    if (d.players && d.players.length) renderPlayers(d.players);
-  });
-
-  socket.on('host_category_updated', d => {
-    $('activeTestName').textContent = `${d.categoryName} — ${d.questionCount} soru`;
-  });
-
-  socket.on('player_list_updated', d => {
-    players = d.count;
-    $('playerCount').textContent = players;
-    $('btnStartGame').disabled = players === 0;
-    $('btnStartGame').innerHTML = `<i data-lucide="play"></i> Oyunu Başlat (${players})`;
-    renderPlayers(d.players);
-    lucide.createIcons();
-  });
-
-  socket.on('host_show_question', d => {
-    show('questionSection');
-    $('questionControls').style.display = 'none';
-    lastQ = d.questionIndex + 1 >= d.totalQuestions;
-    $('qNumTag').textContent = `Soru ${d.questionIndex+1} / ${d.totalQuestions}`;
-    $('qCatTag').textContent = d.categoryName || '';
-    $('qAnswerTag').textContent = `Cevap: 0 / ${d.totalPlayers}`;
-    $('timerDisplay').textContent = d.duration;
-    $('timerDisplay').classList.remove('urgent');
-    $('questionText').textContent = d.q;
-    ['A','B','C','D'].forEach(o => {
-      $('text'+o).textContent = d.options[o];
-      $('card'+o).className = 'option-card opt-' + o.toLowerCase();
-      $('stat'+o).style.display = 'none';
-    });
-  });
-
-  socket.on('timer_tick', d => {
-    $('timerDisplay').textContent = d.remainingSeconds;
-    if (d.remainingSeconds <= 5) $('timerDisplay').classList.add('urgent');
-  });
-
-  socket.on('host_answer_update', d => {
-    $('qAnswerTag').textContent = `Cevap: ${d.answeredCount} / ${d.totalPlayers}`;
-  });
-
-  socket.on('host_question_result', d => {
-    $('timerDisplay').textContent = '0';
-    ['A','B','C','D'].forEach(o => {
-      const card = $('card'+o), stat = $('stat'+o);
-      stat.style.display = 'inline-flex';
-      stat.textContent = `${d.distribution[o]||0} kişi`;
-      card.classList.add(o === d.correct ? 'correct' : 'incorrect');
-    });
-    $('questionControls').style.display = 'block';
-    $('btnShowLeaderboard').innerHTML = lastQ ? 'Kürsüye Git &rarr;' : 'Skor Tablosu &rarr;';
-  });
-
-  socket.on('host_leaderboard_view', d => {
-    show('leaderboardSection');
-    const list = $('leaderboardList');
-    list.innerHTML = '';
-    d.leaderboard.forEach((p, i) => {
-      list.innerHTML += `<div class="leaderboard-row ${i===0?'rank-1':''}"><span class="rank">#${i+1}</span><span class="name">${p.nickname}</span><span class="score">${p.score}</span></div>`;
-    });
-    $('btnNextQuestion').innerHTML = d.questionIndex >= d.totalQuestions ? 'Kürsüye Geç &rarr;' : 'Sonraki Soru &rarr;';
-  });
-
-  socket.on('host_game_over', d => {
-    show('podiumSection');
-    if(d.podium[0]){ $('podName1').textContent=d.podium[0].nickname; $('podScore1').textContent=d.podium[0].score+' puan'; }
-    if(d.podium[1]){ $('podName2').textContent=d.podium[1].nickname; $('podScore2').textContent=d.podium[1].score+' puan'; }
-    if(d.podium[2]){ $('podName3').textContent=d.podium[2].nickname; $('podScore3').textContent=d.podium[2].score+' puan'; }
-    lucide.createIcons();
-  });
-
-  socket.on('auto_next_question', () => {
-    socket.emit('host_next_question', { pin });
-  });
-}
-
-function renderPlayers(list) {
-  const el = $('playerList');
-  el.innerHTML = '';
-  list.forEach(p => {
-    el.innerHTML += `<div class="player-badge"><span>${p.nickname}</span><button class="kick-btn" onclick="kick('${p.id}')"><i data-lucide="x"></i></button></div>`;
-  });
-  lucide.createIcons();
-}
-
-window.kick = id => {
-  if (confirm('Bu öğrenciyi odadan çıkarmak istiyor musun?'))
-    socket.emit('host_kick_player', { pin, playerId: id });
-};
-
-$('btnStartGame').onclick = () => socket.emit('host_next_question', { pin });
-$('btnShowLeaderboard').onclick = () => {
-  if (lastQ) socket.emit('host_end_game', { pin });
-  else socket.emit('host_show_leaderboard', { pin });
-};
-$('btnNextQuestion').onclick = () => socket.emit('host_next_question', { pin });
-
-document.addEventListener('DOMContentLoaded', createRoom);
-</script>
+  <!-- Kick confirm -->
+  <div class="dialog" id="kickDialog" role="alertdialog" aria-modal="true" aria-labelledby="kickTitle" hidden>
+    <div class="dialog-card kick-card">
+      <h2 id="kickTitle" class="section-title-sm">Oyuncuyu çıkar?</h2>
+      <p class="lead-muted"><strong id="kickName">—</strong> odadan çıkarılacak ve aynı oturumla geri dönemeyecek.</p>
+      <div class="kick-actions">
+        <button type="button" class="btn btn-ghost" id="kickCancel">Vazgeç</button>
+        <button type="button" class="btn btn-danger" id="kickConfirm"><i data-icon="x"></i>Çıkar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

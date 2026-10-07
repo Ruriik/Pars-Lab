@@ -2,258 +2,141 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>PARS LAB</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07080a">
+  <meta name="description" content="PARS LAB — Sınıfın canlı bilgi yarışmasına PIN veya QR ile katıl.">
+  <title>PARS LAB — Oyuna Katıl</title>
+  <link rel="icon" href="/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=2">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    /* Mobile-only layout fixes */
-    body.mobile-layout { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); display: flex; flex-direction: column; }
-    #questionScreen.active { width: 100%; max-width: 100%; height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding: 0; }
-    .question-info-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); width: 100%; }
-    .answer-grid-flex { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px; width: 100%; background: var(--bg-root); }
-    .answer-grid-flex .answer-btn { min-height: 0; height: 100%; font-size: 4rem; border-radius: var(--r-xl); }
-    
-    .host-link { margin-top: 32px; font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: color 0.2s ease; }
-    .host-link:hover { color: var(--text-primary); }
-    .host-link svg { width: 14px; height: 14px; }
-  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap">
+  <link rel="stylesheet" href="/css/app.css?v=3">
+  <link rel="stylesheet" href="/css/player.css?v=3">
+  <script src="/js/ui.js?v=3" defer></script>
+  <script src="/socket.io/socket.io.min.js" defer></script>
+  <script src="/js/player.js?v=3" defer></script>
 </head>
-<body class="mobile-layout">
+<body class="player">
+  <div class="ambient" aria-hidden="true"><span class="orb orb-1"></span><span class="orb orb-2"></span><span class="orb orb-3"></span></div>
 
-  <!-- ═══ 1. JOIN ═══ -->
-  <div id="joinScreen" class="screen active">
-    <div class="join-card">
-      <div class="join-logo"><img src="/logo.png" alt="Logo" style="width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 0 12px var(--accent-glow)); margin-bottom: -4px;"></div>
-      <h1 class="join-title">PARS LAB</h1>
-      <p class="join-subtitle">Oyuna katılmak için PIN kodunu gir</p>
-      <form class="join-form" onsubmit="return false;">
-        <input type="text" id="pinInput" class="mobile-input" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="6 haneli PIN" autocomplete="off">
-        <input type="text" id="nickInput" class="mobile-input" maxlength="15" placeholder="Takma adın" autocomplete="off">
-        <button id="btnJoin" class="btn btn-primary"><i data-lucide="log-in"></i> Katıl</button>
-      </form>
-      <p class="error-text" id="errorMsg"></p>
-      
-      <div style="text-align: center;">
-        <a href="/host.html" class="host-link">
-          <i data-lucide="shield"></i> Eğitmen Paneline Git
-        </a>
+  <div class="conn-banner" id="connBanner" role="status" hidden>
+    <i data-icon="loader" class="spin"></i><span id="connBannerText">Bağlantı yeniden kuruluyor…</span>
+  </div>
+
+  <main class="player-shell">
+
+    <!-- JOIN -->
+    <section id="sJoin" class="screen is-active stage" aria-labelledby="joinTitle">
+      <div class="join-wrap">
+        <div class="join-brand rise">
+          <img src="/logo.png" alt="" width="72" height="72">
+        </div>
+        <span class="eyebrow rise d-1">Canlı Sınıf Yarışması</span>
+        <h1 id="joinTitle" class="join-title rise d-2">PARS <span>LAB</span></h1>
+        <p class="join-sub rise d-3">Eğitmenin ekranındaki PIN kodunu gir ya da QR&apos;ı okut.</p>
+
+        <form id="joinForm" class="panel panel-glow join-card rise d-4" novalidate>
+          <div class="field" id="pinField">
+            <label class="field-label" for="pinInput">Oyun PIN&apos;i</label>
+            <input id="pinInput" class="input input-pin" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" aria-describedby="joinError" required>
+          </div>
+          <div class="field" id="nickField">
+            <label class="field-label" for="nickInput">Takma Ad</label>
+            <input id="nickInput" class="input" maxlength="15" autocomplete="nickname" autocapitalize="words" placeholder="Örn. Pars_07" aria-describedby="joinError" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg btn-block" id="joinBtn">
+            <i data-icon="login"></i>Yarışmaya Katıl
+          </button>
+          <p class="form-error" id="joinError" role="alert"></p>
+        </form>
+
+        <a href="/host.html" class="host-link rise d-5"><i data-icon="shield" class="icon-sm"></i>Eğitmen misin? Oda oluştur</a>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- ═══ 2. WAITING ═══ -->
-  <div id="waitingScreen" class="screen">
-    <div class="waiting-content">
-      <div class="spin-icon"><i data-lucide="loader"></i></div>
-      <h2>Lobiye Katıldın!</h2>
-      <p>Öğretmenin oyunu başlatmasını bekle…</p>
-      <div class="waiting-info">
-        <span class="tag" id="waitNick">—</span>
-        <span class="tag" id="waitPin">—</span>
+    <!-- WAITING -->
+    <section id="sWait" class="screen stage" aria-labelledby="waitTitle">
+      <div class="center-stack">
+        <div class="pulse-ring" aria-hidden="true"><span></span><span></span><span></span><img src="/logo.png" alt=""></div>
+        <span class="eyebrow">Lobidesin</span>
+        <h2 id="waitTitle" class="display">Hazır ol, <span id="waitNick" class="accent">—</span></h2>
+        <p class="lead">Adın eğitmen ekranında. Soru başladığında cevap tuşları burada belirecek.</p>
+        <div class="chip-row">
+          <span class="chip chip-brand"><span class="live-dot" id="hostDot"></span><span id="hostStatusText">Eğitmen çevrim içi</span></span>
+          <span class="chip mono" id="waitPin">PIN ——————</span>
+        </div>
+        <p class="hint">Gözün akıllı tahtada olsun — sorular orada.</p>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- ═══ 3. QUESTION (Zero Trust: Only A/B/C/D) ═══ -->
-  <div id="questionScreen" class="screen">
-    <div class="question-info-top">
-      <span id="mobileQNum" style="font-size:0.85rem; font-weight:700; color:var(--text-secondary);">Soru 1/20</span>
-      <span class="mobile-timer" id="mobileTimer">20</span>
-    </div>
-    <div class="answer-grid-flex">
-      <button class="answer-btn btn-a" data-answer="A">A</button>
-      <button class="answer-btn btn-b" data-answer="B">B</button>
-      <button class="answer-btn btn-c" data-answer="C">C</button>
-      <button class="answer-btn btn-d" data-answer="D">D</button>
-    </div>
-  </div>
+    <!-- QUESTION -->
+    <section id="sQuestion" class="screen q-screen" aria-labelledby="qLabel">
+      <header class="q-head">
+        <div>
+          <span class="eyebrow" id="qLabel">Soru 1 / 10</span>
+          <p class="q-hint">Cevabını seç — tahtaya bak</p>
+        </div>
+        <div class="timer timer-sm" id="pTimer">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46"/><circle class="bar" cx="50" cy="50" r="46"/></svg>
+          <span class="timer-value" aria-live="off">20</span>
+        </div>
+      </header>
+      <div class="answer-grid" role="group" aria-label="Cevap seçenekleri">
+        <button class="answer gem-a" data-answer="A"><i data-icon="shape-a" class="icon-xl"></i><span>A</span></button>
+        <button class="answer gem-b" data-answer="B"><i data-icon="shape-b" class="icon-xl"></i><span>B</span></button>
+        <button class="answer gem-c" data-answer="C"><i data-icon="shape-c" class="icon-xl"></i><span>C</span></button>
+        <button class="answer gem-d" data-answer="D"><i data-icon="shape-d" class="icon-xl"></i><span>D</span></button>
+      </div>
+    </section>
 
-  <!-- ═══ 4. LOCKED ═══ -->
-  <div id="lockedScreen" class="screen">
-    <div class="status-card">
-      <div class="icon locked"><i data-lucide="lock"></i></div>
-      <h2>Cevabın Kaydedildi</h2>
-      <div class="selected-answer-display" id="lockedLetter">—</div>
-      <p>Sürenin bitmesini bekle…</p>
-    </div>
-  </div>
+    <!-- LOCKED -->
+    <section id="sLocked" class="screen stage" aria-labelledby="lockTitle">
+      <div class="center-stack">
+        <div class="locked-gem" id="lockedGem"><i data-icon="shape-a" class="icon-xl"></i><span id="lockedLetter">A</span></div>
+        <span class="eyebrow">Cevap kilitlendi</span>
+        <h2 id="lockTitle" class="display">Kararını verdin</h2>
+        <p class="lead">Diğerlerini bekliyoruz… Hızlı cevap = daha çok puan.</p>
+        <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      </div>
+    </section>
 
-  <!-- ═══ 5. RESULT ═══ -->
-  <div id="resultScreen" class="screen">
-    <div class="status-card" id="resultCard">
-      <div class="icon" id="resultIcon"><i data-lucide="check-circle"></i></div>
-      <h2 id="resultTitle">Doğru!</h2>
-      <div class="big-score" id="earnedPts">+0</div>
-      <p>Toplam: <strong id="totalScore">0</strong> puan</p>
-      <p class="rank-text" id="rankText">Sıralaman: —</p>
-    </div>
-  </div>
+    <!-- RESULT -->
+    <section id="sResult" class="screen stage result" aria-labelledby="resTitle">
+      <div class="center-stack">
+        <div class="result-badge" id="resBadge"><i data-icon="check" class="icon-xl"></i></div>
+        <h2 id="resTitle" class="display">Doğru!</h2>
+        <div class="points mono" id="resPoints">+0</div>
+        <span class="chip chip-gold streak" id="resStreak" hidden><i data-icon="flame" class="icon-sm"></i><span id="resStreakText">2 seri</span></span>
+        <div class="stat-row panel">
+          <div><span class="stat-label">Toplam</span><span class="stat-value mono" id="resTotal">0</span></div>
+          <div class="stat-divider"></div>
+          <div><span class="stat-label">Sıra</span><span class="stat-value mono gold" id="resRank">#1</span></div>
+        </div>
+      </div>
+    </section>
 
-  <!-- ═══ 6. GAME OVER ═══ -->
-  <div id="gameOverScreen" class="screen">
-    <div class="status-card">
-      <div class="icon trophy"><i data-lucide="trophy"></i></div>
-      <h2>Oyun Bitti!</h2>
-      <div class="big-score" id="finalScore">0</div>
-      <p class="rank-text" id="finalRank">Sıralaman: —</p>
-      <p style="margin-top:12px; color:var(--text-tertiary); font-size:0.85rem;">Tebrikler, harika oynadın!</p>
-    </div>
-  </div>
+    <!-- GAME OVER -->
+    <section id="sOver" class="screen stage" aria-labelledby="overTitle">
+      <div class="center-stack">
+        <div class="medal" id="overMedal"><i data-icon="trophy" class="icon-xl"></i></div>
+        <span class="eyebrow">Yarışma bitti</span>
+        <h2 id="overTitle" class="display">Final sıran</h2>
+        <div class="final-rank mono" id="overRank">#1</div>
+        <p class="lead">Toplam <strong class="mono gold" id="overScore">0</strong> puan · <span id="overOf">1</span> oyuncu</p>
+        <a href="/" class="btn btn-ghost btn-lg" id="overHome"><i data-icon="rotate"></i>Yeni oyuna katıl</a>
+      </div>
+    </section>
 
-  <!-- ═══ 7. KICKED / DISCONNECTED ═══ -->
-  <div id="kickedScreen" class="screen">
-    <div class="status-card">
-      <div class="icon disconnected"><i data-lucide="wifi-off"></i></div>
-      <h2 id="kickedTitle">Bağlantı Kesildi</h2>
-      <p id="kickedMsg">Sunucuyla bağlantı koptu.</p>
-      <button onclick="location.reload()" class="btn btn-primary" style="margin-top:24px;">
-        <i data-lucide="rotate-ccw"></i> Tekrar Dene
-      </button>
-    </div>
-  </div>
+    <!-- CLOSED -->
+    <section id="sClosed" class="screen stage" aria-labelledby="closedTitle">
+      <div class="center-stack">
+        <div class="result-badge bad"><i data-icon="wifi-off" class="icon-xl"></i></div>
+        <h2 id="closedTitle" class="display">Bağlantı kesildi</h2>
+        <p class="lead" id="closedMsg">Oda kapatıldı.</p>
+        <a href="/" class="btn btn-primary btn-lg"><i data-icon="rotate"></i>Ana sayfaya dön</a>
+      </div>
+    </section>
 
-<script>
-lucide.createIcons();
-
-let socket = null, myPin = '', myNick = '', answered = false;
-
-const $ = id => document.getElementById(id);
-const allScreens = ['joinScreen','waitingScreen','questionScreen','lockedScreen','resultScreen','gameOverScreen','kickedScreen'];
-function show(id) {
-  allScreens.forEach(s => {
-    const el = $(s);
-    el.classList.toggle('active', s === id);
-  });
-}
-
-const answerBtns = document.querySelectorAll('.answer-btn');
-
-const qrPin = new URLSearchParams(location.search).get('pin');
-if (qrPin && /^\d{6}$/.test(qrPin)) {
-  $('pinInput').value = qrPin;
-  $('nickInput').focus();
-}
-
-// ── Join ──
-$('btnJoin').onclick = () => {
-  const p = $('pinInput').value.trim();
-  const n = $('nickInput').value.trim();
-  const err = $('errorMsg');
-  err.style.display = 'none';
-
-  if (!/^\d{6}$/.test(p)) { err.textContent = 'PIN 6 haneli rakam olmalı.'; err.style.display = 'block'; return; }
-  if (n.length < 2) { err.textContent = 'Takma ad en az 2 karakter olmalı.'; err.style.display = 'block'; return; }
-
-  $('btnJoin').disabled = true;
-  $('btnJoin').innerHTML = '<i data-lucide="loader" style="animation:spin 1s linear infinite"></i> Bağlanıyor…';
-  lucide.createIcons();
-  connectAndJoin(p, n);
-};
-
-function connectAndJoin(p, n) {
-  socket = io();
-
-  socket.on('connect', () => {
-    socket.emit('player_join_room', { pin: p, nickname: n });
-  });
-
-  socket.on('auth_error', d => {
-    show('joinScreen');
-    const err = $('errorMsg');
-    err.textContent = d.message;
-    err.style.display = 'block';
-    $('btnJoin').disabled = false;
-    $('btnJoin').innerHTML = '<i data-lucide="log-in"></i> Katıl';
-    lucide.createIcons();
-  });
-
-  socket.on('player_joined', d => {
-    myPin = d.pin; myNick = d.nickname;
-    show('waitingScreen');
-    $('waitNick').textContent = myNick;
-    $('waitPin').textContent = 'PIN: ' + myPin;
-  });
-
-  socket.on('player_show_buttons', d => {
-    show('questionScreen');
-    $('mobileQNum').textContent = `Soru ${d.questionIndex} / ${d.totalQuestions}`;
-    $('mobileTimer').textContent = d.duration;
-    $('mobileTimer').classList.remove('urgent');
-    answered = false;
-    answerBtns.forEach(b => { b.disabled = false; b.classList.remove('selected'); });
-  });
-
-  socket.on('timer_tick', d => {
-    $('mobileTimer').textContent = d.remainingSeconds;
-    if (d.remainingSeconds <= 5) $('mobileTimer').classList.add('urgent');
-  });
-
-  socket.on('player_answer_received', d => {
-    show('lockedScreen');
-    $('lockedLetter').textContent = d.selectedAnswer;
-  });
-
-  socket.on('player_question_result', d => {
-    show('resultScreen');
-    const icon = $('resultIcon');
-    if (d.isCorrect) {
-      icon.className = 'icon correct';
-      icon.innerHTML = '<i data-lucide="check-circle"></i>';
-      $('resultTitle').textContent = 'Doğru!';
-      $('resultTitle').style.color = 'var(--success)';
-    } else {
-      icon.className = 'icon incorrect';
-      icon.innerHTML = '<i data-lucide="x-circle"></i>';
-      $('resultTitle').textContent = 'Yanlış';
-      $('resultTitle').style.color = 'var(--error)';
-    }
-    $('earnedPts').textContent = d.earnedPoints > 0 ? `+${d.earnedPoints}` : '0';
-    $('totalScore').textContent = d.totalScore;
-    $('rankText').textContent = `Sıralaman: ${d.rank}. / ${d.totalPlayers}`;
-    lucide.createIcons();
-  });
-
-  socket.on('player_leaderboard_view', d => {
-    $('rankText').textContent = `Sıralaman: ${d.rank}. / ${d.totalPlayers}`;
-  });
-
-  socket.on('player_game_over', d => {
-    show('gameOverScreen');
-    $('finalScore').textContent = d.totalScore + ' puan';
-    $('finalRank').textContent = `Sıralaman: ${d.rank}. / ${d.totalPlayers}`;
-  });
-
-  socket.on('room_closed', d => {
-    show('kickedScreen');
-    $('kickedTitle').textContent = 'Odadan Çıkarıldın';
-    $('kickedMsg').textContent = d.message || 'Oda kapatıldı.';
-    lucide.createIcons();
-  });
-
-  socket.on('disconnect', () => {
-    show('kickedScreen');
-    $('kickedTitle').textContent = 'Bağlantı Kesildi';
-    $('kickedMsg').textContent = 'Sunucuyla bağlantı koptu.';
-    lucide.createIcons();
-  });
-}
-
-// ── Answer Buttons ──
-answerBtns.forEach(btn => {
-  btn.addEventListener('click', function() {
-    if (answered) return;
-    answered = true;
-    const ans = this.dataset.answer;
-    answerBtns.forEach(b => { b.disabled = true; });
-    this.classList.add('selected');
-    socket.emit('player_submit_answer', { pin: myPin, answer: ans });
-  });
-});
-</script>
+  </main>
 </body>
 </html>

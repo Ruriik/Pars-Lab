@@ -1,60 +1,76 @@
 /**
- * PARS LAB - Retro 8-Bit Cyber Real-Time Quiz Engine
- * Zero Trust Architecture, In-Memory State, Cloudflare Proxy Aware, OWASP Security Hardened
+ * PARS LAB — Real-time classroom quiz engine
+ * In-memory state, zero-trust payloads, hardened HTTP + Socket.IO surface.
  */
 
 const express = require('express');
 const http = require('http');
 const path = require('path');
-const { Server } = require('socket.io');
+const fs = require('fs');
+const crypto = require('crypto');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const { Server } = require('socket.io');
+
+const PORT = Number(process.env.PORT) || 3000;
+const TRUST_CLOUDFLARE = process.env.TRUST_CLOUDFLARE === '1';
+const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const LIMITS = {
+  maxRooms: 500,
+  maxPlayersPerRoom: 200,
+  maxSocketsPerIp: Number(process.env.MAX_SOCKETS_PER_IP) || 150,
+  hostGraceMs: 45 * 1000,
+  lobbyPlayerGraceMs: 30 * 1000,
+  roomIdleMs: 15 * 60 * 1000,
+  eventBurst: 25,
+  eventWindowMs: 5 * 1000,
+  allowedDurations: [10, 20, 30, 45, 60],
+  leaderboardAutoSkipMs: 10 * 1000
+};
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', TRUST_PROXY ? 1 : false);
+
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+
+/* ───────────────────────── IP resolution ───────────────────────── */
+
+function resolveIp(remoteAddress, headers) {
+  if (TRUST_CLOUDFLARE) {
+    const cf = headers['cf-connecting-ip'];
+    if (typeof cf === 'string' && cf.length < 64) return cf.trim();
   }
-});
-
-const PORT = process.env.PORT || 3000;
-
-// 1. CLOUDFLARE IP RESOLUTION & TRUST PROXY
-app.set('trust proxy', true);
-
-function getClientIp(req) {
-  const cfIp = req.headers['cf-connecting-ip'];
-  if (cfIp && typeof cfIp === 'string') return cfIp.trim();
-  const xForwarded = req.headers['x-forwarded-for'];
-  if (xForwarded && typeof xForwarded === 'string') return xForwarded.split(',')[0].trim();
-  return req.socket.remoteAddress || req.ip || '127.0.0.1';
+  if (TRUST_PROXY) {
+    const xff = headers['x-forwarded-for'];
+    if (typeof xff === 'string') {
+      const hops = xff.split(',').map((h) => h.trim()).filter(Boolean);
+      if (hops.length) return hops[hops.length - 1];
+    }
+  }
+  return remoteAddress || 'unknown';
 }
 
-function getSocketIp(socket) {
-  const headers = socket.handshake.headers;
-  const cfIp = headers['cf-connecting-ip'];
-  if (cfIp && typeof cfIp === 'string') return cfIp.trim();
-  const xForwarded = headers['x-forwarded-for'];
-  if (xForwarded && typeof xForwarded === 'string') return xForwarded.split(',')[0].trim();
-  return socket.handshake.address || '127.0.0.1';
-}
+const getClientIp = (req) => resolveIp(req.socket.remoteAddress, req.headers);
+const getSocketIp = (socket) => resolveIp(socket.handshake.address, socket.handshake.headers);
 
-// 2. SECURITY: FAILED PIN ATTEMPT TRACKER & TEMPORARY BAN SYSTEM
-// Ban IPs temporarily after 10 failed PIN attempts in 1 minute
-const failedPinAttempts = new Map(); // ip -> { count: number, windowStart: number, bannedUntil: number }
-const BAN_DURATION_MS = 10 * 60 * 1000; // 10 minutes ban
-const WINDOW_DURATION_MS = 60 * 1000; // 1 minute tracking window
+/* ───────────────────────── Brute-force ban ───────────────────────── */
+
+const failedPinAttempts = new Map();
+const BAN_DURATION_MS = 10 * 60 * 1000;
+const WINDOW_DURATION_MS = 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 10;
 
 function isIpBanned(ip) {
   const record = failedPinAttempts.get(ip);
-  if (!record) return { banned: false };
-  const now = Date.now();
-  if (record.bannedUntil && record.bannedUntil > now) {
-    const remainingSec = Math.ceil((record.bannedUntil - now) / 1000);
-    return { banned: true, remainingSec };
-  }
+  if (!record || !record.bannedUntil) return { banned: false };
+  const remaining = record.bannedUntil - Date.now();
+  if (remaining > 0) return { banned: true, remainingSec: Math.ceil(remaining / 1000) };
   return { banned: false };
 }
 
@@ -67,34 +83,50 @@ function recordFailedPinAttempt(ip) {
     record.count += 1;
     if (record.count >= MAX_FAILED_ATTEMPTS) {
       record.bannedUntil = now + BAN_DURATION_MS;
-      console.warn(`[SECURITY ALERT] IP ${ip} has been temporarily banned for 10 minutes due to 10 failed PIN attempts.`);
+      console.warn(`[SECURITY] IP ${ip} banned for 10 minutes (PIN brute force).`);
     }
   }
   failedPinAttempts.set(ip, record);
 }
 
-function resetFailedPinAttempts(ip) {
-  failedPinAttempts.delete(ip);
-}
+const resetFailedPinAttempts = (ip) => failedPinAttempts.delete(ip);
 
-// Clean up old IP ban records periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, record] of failedPinAttempts.entries()) {
-    if (record.bannedUntil && record.bannedUntil <= now && now - record.windowStart > WINDOW_DURATION_MS) {
-      failedPinAttempts.delete(ip);
-    }
-  }
-}, 5 * 60 * 1000);
+/* ───────────────────────── HTTP hardening ───────────────────────── */
 
-// 3. RATE LIMITERS (OWASP DDOS & BRUTE FORCE PROTECTION)
+app.use(compression());
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  if (req.secure) res.setHeader('Strict-Transport-Security', 'max-age=63072000');
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data:",
+      "connect-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'self'"
+    ].join('; ')
+  );
+  next();
+});
+
 const roomCreateLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => getClientIp(req),
-  validate: { trustProxy: false, xForwardedForHeader: false },
+  keyGenerator: getClientIp,
+  validate: false,
   message: { success: false, error: 'Çok fazla oda oluşturuldu. Lütfen birkaç dakika sonra tekrar deneyin.' }
 });
 
@@ -103,41 +135,57 @@ const pinVerifyLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => getClientIp(req),
-  validate: { trustProxy: false, xForwardedForHeader: false },
+  keyGenerator: getClientIp,
+  validate: false,
   message: { success: false, error: 'Çok fazla PIN kontrol isteği. Lütfen bekleyin.' }
 });
 
-const fs = require('fs');
-const compression = require('compression');
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: getClientIp,
+  validate: false
+});
 
-// Enable GZIP Compression for all HTTP responses
-app.use(compression());
+app.use('/api', apiLimiter, express.json({ limit: '2kb' }));
 
-// Middleware for parsing JSON & serving static files
-app.use(express.json({ limit: '50kb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.get('/mobile.html', (req, res) => res.redirect(301, '/'));
+app.get('/vendor/qrcode.js', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+  res.sendFile(path.join(__dirname, 'node_modules', 'qrcode-generator', 'qrcode.js'));
+});
+app.use(express.static(path.join(__dirname, 'public'), { dotfiles: 'ignore', index: 'index.html' }));
 
-// 4. XSS PROTECTION & INPUT SANITIZATION
-function sanitizeString(str, maxLen = 30) {
-  if (typeof str !== 'string') return '';
-  return str
-    .replace(/<[^>]*>?/gm, '') // Strip HTML tags
-    .replace(/[&<>"'/]/g, (s) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;'
-    }[s] || ''))
+/* ───────────────────────── Input validation ───────────────────────── */
+
+const isPin = (v) => typeof v === 'string' && /^\d{6}$/.test(v);
+const isSafeKey = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(v);
+const isToken = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{20,64}$/.test(v);
+const own = (obj, key) => obj && Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : undefined;
+
+function sanitizeNickname(raw) {
+  if (typeof raw !== 'string') return '';
+  return raw
+    .normalize('NFC')
+    .replace(/[^a-zA-Z0-9_\-\sığüşöçİĞÜŞÖÇ]/g, '')
+    .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, maxLen);
+    .slice(0, 15);
 }
 
-function sanitizeNickname(rawName) {
-  if (typeof rawName !== 'string') return '';
-  let cleaned = rawName.replace(/<[^>]*>?/gm, '').trim();
-  cleaned = cleaned.replace(/[^a-zA-Z0-9_\-\sığüşöçİĞÜŞÖÇ]/g, '');
-  return cleaned.trim().slice(0, 15);
+function safeTokenEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const ha = crypto.createHash('sha256').update(a).digest();
+  const hb = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(ha, hb);
 }
 
-// Load Hierarchical Questions from JSON
+const newToken = () => crypto.randomBytes(24).toString('base64url');
+
+/* ───────────────────────── Question bank ───────────────────────── */
+
 let questionDb = { grades: {} };
 try {
   questionDb = JSON.parse(fs.readFileSync(path.join(__dirname, 'questions.json'), 'utf8'));
@@ -145,21 +193,18 @@ try {
   console.error("questions.json yüklenemedi. 'node generate_questions.js' çalıştırdığınıza emin olun.");
 }
 
-// 5. MODULAR QUESTION PACKS (Maarif Modeli & EBA Uyumlu)
-// This endpoint sends the nested structure (Grades -> Subjects -> Topics -> Tests) to the Host UI.
-// We strip the actual "questions" array to save bandwidth.
 function getStructureList() {
   const structure = {};
-  for (const [gradeId, grade] of Object.entries(questionDb.grades)) {
+  for (const [gradeId, grade] of Object.entries(questionDb.grades || {})) {
     structure[gradeId] = { name: grade.name, subjects: {} };
-    for (const [subId, sub] of Object.entries(grade.subjects)) {
+    for (const [subId, sub] of Object.entries(grade.subjects || {})) {
       structure[gradeId].subjects[subId] = { name: sub.name, icon: sub.icon || 'book', topics: {} };
-      for (const [topId, top] of Object.entries(sub.topics)) {
+      for (const [topId, top] of Object.entries(sub.topics || {})) {
         structure[gradeId].subjects[subId].topics[topId] = { name: top.name, tests: {} };
-        for (const [testId, test] of Object.entries(top.tests)) {
+        for (const [testId, test] of Object.entries(top.tests || {})) {
           structure[gradeId].subjects[subId].topics[topId].tests[testId] = {
             name: test.name,
-            questionCount: test.questions ? test.questions.length : 0
+            questionCount: Array.isArray(test.questions) ? test.questions.length : 0
           };
         }
       }
@@ -167,762 +212,758 @@ function getStructureList() {
   }
   return structure;
 }
+const CATEGORY_STRUCTURE = getStructureList();
 
-// Helper to get questions by specific path
-function getQuestionsFromPath(gradeId, subId, topId, testId) {
-  try {
-    return questionDb.grades[gradeId].subjects[subId].topics[topId].tests[testId].questions;
-  } catch(e) {
-    return null;
-  }
+function resolveTest(p) {
+  if (!p || ![p.gradeId, p.subId, p.topId, p.testId].every(isSafeKey)) return null;
+  const grade = own(questionDb.grades, p.gradeId);
+  const sub = own(grade && grade.subjects, p.subId);
+  const top = own(sub && sub.topics, p.topId);
+  const test = own(top && top.tests, p.testId);
+  if (!test || !Array.isArray(test.questions) || !test.questions.length) return null;
+  return {
+    path: { gradeId: p.gradeId, subId: p.subId, topId: p.topId, testId: p.testId },
+    name: test.name,
+    label: [grade.name, sub.name, top.name, test.name].join(' · '),
+    questions: test.questions
+  };
 }
 
-// IN-MEMORY GAME ROOM STORAGE
-// pin -> RoomObject
+function firstAvailableTest() {
+  for (const [gradeId, grade] of Object.entries(questionDb.grades || {})) {
+    for (const [subId, sub] of Object.entries(grade.subjects || {})) {
+      for (const [topId, top] of Object.entries(sub.topics || {})) {
+        for (const testId of Object.keys(top.tests || {})) {
+          const t = resolveTest({ gradeId, subId, topId, testId });
+          if (t) return t;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/* ───────────────────────── Room state ───────────────────────── */
+
 const rooms = new Map();
 
-// Helper to generate unique 6-digit PIN
 function generateUniquePin() {
-  for (let attempt = 0; attempt < 1000; attempt++) {
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+  for (let i = 0; i < 1000; i++) {
+    const pin = String(crypto.randomInt(100000, 1000000));
     if (!rooms.has(pin)) return pin;
   }
   return null;
 }
 
-// 6. REST API ENDPOINTS
+const publicPlayers = (room) =>
+  Array.from(room.players.values()).map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, online: p.online }));
 
-// Categories List Endpoint
-app.get('/api/categories', (req, res) => {
-  res.json({
-    success: true,
-    categories: getStructureList()
+const onlineCount = (room) => {
+  let n = 0;
+  for (const p of room.players.values()) if (p.online) n++;
+  return n;
+};
+
+const answeredCount = (room) => {
+  let n = 0;
+  for (const p of room.players.values()) if (p.currentAnswer) n++;
+  return n;
+};
+
+function rankedPlayers(room) {
+  return Array.from(room.players.values()).sort((a, b) => b.score - a.score);
+}
+
+function getLeaderboard(room, limit = 10) {
+  return rankedPlayers(room)
+    .slice(0, limit)
+    .map((p) => ({ nickname: p.nickname, score: p.score, lastEarned: p.lastEarnedPoints || 0 }));
+}
+
+function getDistribution(room) {
+  const counts = { A: 0, B: 0, C: 0, D: 0 };
+  for (const p of room.players.values()) {
+    if (p.currentAnswer && own(counts, p.currentAnswer) !== undefined) counts[p.currentAnswer]++;
+  }
+  return counts;
+}
+
+const toHost = (room, event, payload) => {
+  if (room.hostSocketId) io.to(room.hostSocketId).emit(event, payload);
+};
+const toPlayer = (player, event, payload) => {
+  if (player.online && player.socketId) io.to(player.socketId).emit(event, payload);
+};
+
+function touch(room) {
+  room.lastActivity = Date.now();
+}
+
+function clearTimers(room) {
+  if (room.timerInterval) clearInterval(room.timerInterval);
+  if (room.leaderboardTimeout) clearTimeout(room.leaderboardTimeout);
+  room.timerInterval = null;
+  room.leaderboardTimeout = null;
+}
+
+function closeRoom(room, message) {
+  clearTimers(room);
+  if (room.hostGraceTimeout) clearTimeout(room.hostGraceTimeout);
+  for (const p of room.players.values()) if (p.graceTimeout) clearTimeout(p.graceTimeout);
+  io.to(room.pin).emit('room_closed', { message });
+  io.in(room.pin).socketsLeave(room.pin);
+  rooms.delete(room.pin);
+}
+
+function pushPlayerList(room) {
+  toHost(room, 'player_list_updated', { count: room.players.size, online: onlineCount(room), players: publicPlayers(room) });
+}
+
+function finishQuestion(room) {
+  if (!room || room.state !== 'QUESTION') return;
+  clearTimers(room);
+  room.state = 'RESULT';
+  room.remainingSeconds = 0;
+
+  const qObj = room.questions[room.currentQuestionIndex];
+  const maxMs = room.questionDuration * 1000;
+
+  for (const p of room.players.values()) {
+    if (p.currentAnswer && p.currentAnswer === qObj.correct) {
+      const speed = Math.max(0, 1 - p.responseTimeMs / maxMs);
+      const earned = Math.round(500 + 500 * speed);
+      p.score += earned;
+      p.lastEarnedPoints = earned;
+      p.streak = (p.streak || 0) + 1;
+    } else {
+      p.lastEarnedPoints = 0;
+      p.streak = 0;
+    }
+  }
+
+  const ranked = rankedPlayers(room);
+  const rankMap = new Map(ranked.map((p, i) => [p.id, i + 1]));
+
+  toHost(room, 'host_question_result', {
+    correct: qObj.correct,
+    distribution: getDistribution(room),
+    totalAnswered: answeredCount(room),
+    totalPlayers: room.players.size,
+    isLast: room.currentQuestionIndex + 1 >= room.questions.length,
+    leaderboard: getLeaderboard(room, 5)
   });
-});
 
-// Create Room Endpoint (Host calls this)
-app.post('/api/rooms', roomCreateLimiter, (req, res) => {
-  const clientIp = getClientIp(req);
-  const banStatus = isIpBanned(clientIp);
-  if (banStatus.banned) {
-    return res.status(429).json({
-      success: false,
-      error: `IP adresiniz engellendi. Kalan süre: ${banStatus.remainingSec} saniye.`
+  for (const p of room.players.values()) {
+    toPlayer(p, 'player_question_result', playerResultPayload(room, p, rankMap.get(p.id) || 1));
+  }
+}
+
+function playerResultPayload(room, p, rank) {
+  const qObj = room.questions[room.currentQuestionIndex];
+  return {
+    action: 'show_result',
+    isCorrect: !!p.currentAnswer && p.currentAnswer === qObj.correct,
+    selectedAnswer: p.currentAnswer || null,
+    earnedPoints: p.lastEarnedPoints || 0,
+    totalScore: p.score,
+    streak: p.streak || 0,
+    rank,
+    totalPlayers: room.players.size
+  };
+}
+
+function gameOver(room) {
+  clearTimers(room);
+  room.state = 'PODIUM';
+  touch(room);
+  const leaderboard = getLeaderboard(room, 10);
+  toHost(room, 'host_game_over', { podium: leaderboard.slice(0, 3), leaderboard, totalPlayers: room.players.size });
+  rankedPlayers(room).forEach((p, i) => {
+    toPlayer(p, 'player_game_over', { rank: i + 1, totalScore: p.score, totalPlayers: room.players.size });
+  });
+}
+
+function startNextQuestion(room) {
+  clearTimers(room);
+  touch(room);
+  room.currentQuestionIndex += 1;
+
+  if (room.currentQuestionIndex >= room.questions.length) {
+    gameOver(room);
+    return;
+  }
+
+  const idx = room.currentQuestionIndex;
+  const qObj = room.questions[idx];
+  room.state = 'QUESTION';
+  room.questionStartTime = Date.now();
+  room.questionDuration = room.settings.questionDuration;
+  room.remainingSeconds = room.questionDuration;
+
+  for (const p of room.players.values()) {
+    p.currentAnswer = null;
+    p.responseTimeMs = 0;
+    p.lastEarnedPoints = 0;
+  }
+
+  toHost(room, 'host_show_question', {
+    questionIndex: idx,
+    totalQuestions: room.questions.length,
+    categoryName: room.testName,
+    q: qObj.q,
+    options: qObj.options,
+    duration: room.questionDuration,
+    totalPlayers: room.players.size,
+    answeredCount: 0
+  });
+
+  for (const p of room.players.values()) {
+    toPlayer(p, 'player_show_buttons', {
+      action: 'show_buttons',
+      questionIndex: idx + 1,
+      totalQuestions: room.questions.length,
+      duration: room.questionDuration
     });
   }
 
-  const pin = generateUniquePin();
-  if (!pin) {
-    return res.status(500).json({ success: false, error: 'Oda PIN oluşturulamadı. Sunucu dolu.' });
+  room.timerInterval = setInterval(() => {
+    room.remainingSeconds -= 1;
+    io.to(room.pin).emit('timer_tick', { remainingSeconds: Math.max(0, room.remainingSeconds) });
+    if (room.remainingSeconds <= 0) finishQuestion(room);
+  }, 1000);
+}
+
+function showLeaderboard(room) {
+  room.state = 'LEADERBOARD';
+  touch(room);
+  toHost(room, 'host_leaderboard_view', {
+    leaderboard: getLeaderboard(room, 5),
+    questionIndex: room.currentQuestionIndex + 1,
+    totalQuestions: room.questions.length,
+    categoryName: room.testName,
+    autoSkipMs: room.settings.autoSkipLeaderboard ? LIMITS.leaderboardAutoSkipMs : 0
+  });
+  rankedPlayers(room).forEach((p, i) => {
+    toPlayer(p, 'player_leaderboard_view', { rank: i + 1, score: p.score, totalPlayers: room.players.size });
+  });
+
+  if (room.settings.autoSkipLeaderboard) {
+    room.leaderboardTimeout = setTimeout(() => {
+      if (rooms.has(room.pin) && room.state === 'LEADERBOARD') startNextQuestion(room);
+    }, LIMITS.leaderboardAutoSkipMs);
+  }
+}
+
+/* ───────────────────────── REST API ───────────────────────── */
+
+app.get('/api/categories', (req, res) => {
+  res.json({ success: true, categories: CATEGORY_STRUCTURE });
+});
+
+app.post('/api/rooms', roomCreateLimiter, (req, res) => {
+  const ip = getClientIp(req);
+  const ban = isIpBanned(ip);
+  if (ban.banned) {
+    return res.status(429).json({ success: false, error: `IP adresiniz engellendi. Kalan süre: ${ban.remainingSec} saniye.` });
+  }
+  if (rooms.size >= LIMITS.maxRooms) {
+    return res.status(503).json({ success: false, error: 'Sunucu kapasitesi dolu. Lütfen daha sonra deneyin.' });
   }
 
-  // Varsayılan olarak 9. Sınıf Tarih - İlk Çağ - Kolay testi seçili gelsin
-  const defaultPath = { gradeId: '9', subId: 'tarih', topId: 'ilkcag', testId: 'kolay' };
-  const defaultQuestions = getQuestionsFromPath('9', 'tarih', 'ilkcag', 'kolay') || [];
+  const pin = generateUniquePin();
+  const test = firstAvailableTest();
+  if (!pin || !test) {
+    return res.status(500).json({ success: false, error: 'Oda oluşturulamadı.' });
+  }
 
-  // Room state stored strictly in RAM (zero overhead, references shared questions array)
-  const room = {
+  const hostToken = newToken();
+  rooms.set(pin, {
     pin,
+    hostToken,
     hostSocketId: null,
-    hostIp: clientIp,
-    state: 'LOBBY', // 'LOBBY', 'QUESTION', 'RESULT', 'LEADERBOARD', 'PODIUM'
-    selectedPath: defaultPath,
-    questions: defaultQuestions,
+    hostGraceTimeout: null,
+    state: 'LOBBY',
+    selectedPath: test.path,
+    testName: test.label,
+    questions: test.questions,
+    settings: { questionDuration: 20, autoFinish: true, autoSkipLeaderboard: false },
     createdAt: Date.now(),
     lastActivity: Date.now(),
     currentQuestionIndex: -1,
     questionStartTime: 0,
-    questionDuration: 20, // 20 seconds per question
+    questionDuration: 20,
+    remainingSeconds: 0,
     timerInterval: null,
-    remainingSeconds: 20,
-    players: new Map(), // socketId -> { id, nickname, score, currentAnswer, answeredAt, ip, lastEarnedPoints }
-    createdAt: Date.now()
-  };
+    leaderboardTimeout: null,
+    players: new Map(),
+    nicknames: new Set(),
+    revokedTokens: new Set()
+  });
 
-  rooms.set(pin, room);
-  console.log(`[ROOM CREATED] PIN: ${pin} by IP: ${clientIp}`);
-
-  res.json({ success: true, pin, selectedPath: defaultPath });
+  console.log(`[ROOM CREATED] PIN ${pin}`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ success: true, pin, hostToken, selectedPath: test.path });
 });
 
-// Verify Room PIN Endpoint (Player pre-checks PIN)
 app.post('/api/check-pin', pinVerifyLimiter, (req, res) => {
-  const clientIp = getClientIp(req);
-  const banStatus = isIpBanned(clientIp);
-  if (banStatus.banned) {
+  const ip = getClientIp(req);
+  const ban = isIpBanned(ip);
+  if (ban.banned) {
     return res.status(429).json({
       success: false,
       banned: true,
-      error: `Güvenlik Protokolü: 10 hatalı deneme nedeniyle IP engellendi. Kalan: ${banStatus.remainingSec} sn.`
+      error: `Güvenlik: Çok fazla hatalı deneme. Kalan: ${ban.remainingSec} sn.`
     });
   }
 
-  const pin = sanitizeString(req.body.pin, 6);
-  if (!/^\d{6}$/.test(pin)) {
-    recordFailedPinAttempt(clientIp);
+  const pin = req.body && req.body.pin;
+  if (!isPin(pin)) {
+    recordFailedPinAttempt(ip);
     return res.status(400).json({ success: false, error: 'Geçersiz 6 haneli PIN.' });
   }
 
   const room = rooms.get(pin);
   if (!room) {
-    recordFailedPinAttempt(clientIp);
+    recordFailedPinAttempt(ip);
     return res.status(404).json({ success: false, error: 'Oda bulunamadı. Lütfen PIN kodunu kontrol edin.' });
   }
-
   if (room.state !== 'LOBBY') {
     return res.status(403).json({ success: false, error: 'Oyun zaten başlamış veya kapalı.' });
   }
 
-  // Reset failed attempts on success
-  resetFailedPinAttempts(clientIp);
+  resetFailedPinAttempts(ip);
   res.json({ success: true, state: room.state });
 });
 
-// 7. SOCKET.IO REAL-TIME ZERO-TRUST LOGIC & FLOOD DEBOUNCING
-// Per-socket throttle tracker: socketId -> lastTimestamp
-const socketThrottleMap = new Map();
+app.use('/api', (req, res) => res.status(404).json({ success: false, error: 'Bulunamadı.' }));
 
-function isThrottled(key, intervalMs = 1000) {
-  const now = Date.now();
-  const lastTime = socketThrottleMap.get(key) || 0;
-  if (now - lastTime < intervalMs) {
-    return true; // Flooding, throttled
+app.use((err, req, res, next) => {
+  if (err && (err.type === 'entity.parse.failed' || err.type === 'entity.too.large')) {
+    return res.status(400).json({ success: false, error: 'Geçersiz istek.' });
   }
-  socketThrottleMap.set(key, now);
-  return false;
-}
+  console.error('[HTTP ERROR]', err && err.message);
+  res.status(500).json({ success: false, error: 'Sunucu hatası.' });
+});
 
-// Room Leaderboard Calculator
-function getLeaderboard(room, limit = 10) {
-  const playersList = Array.from(room.players.values()).map(p => ({
-    nickname: p.nickname,
-    score: p.score
-  }));
-  playersList.sort((a, b) => b.score - a.score);
-  return playersList.slice(0, limit);
-}
+/* ───────────────────────── Socket.IO ───────────────────────── */
 
-// Question Distribution Calculator (Only counts A, B, C, D)
-function getDistribution(room) {
-  const counts = { A: 0, B: 0, C: 0, D: 0 };
-  for (const player of room.players.values()) {
-    if (player.currentAnswer && counts[player.currentAnswer] !== undefined) {
-      counts[player.currentAnswer]++;
-    }
-  }
-  return counts;
-}
-
-// End current question and show result to Host and Players
-function finishQuestion(room) {
-  if (!room || room.state !== 'QUESTION') return;
-
-  if (room.timerInterval) {
-    clearInterval(room.timerInterval);
-    room.timerInterval = null;
-  }
-
-  room.state = 'RESULT';
-  const roomQuestions = room.questions || [];
-  const qObj = roomQuestions[room.currentQuestionIndex];
-  const maxDurationMs = room.questionDuration * 1000;
-
-  // Calculate scores ONLY when the timer reaches zero!
-  for (const player of room.players.values()) {
-    if (player.currentAnswer) {
-      const isCorrect = (player.currentAnswer === qObj.correct);
-      if (isCorrect) {
-        const respTime = player.responseTimeMs !== undefined ? player.responseTimeMs : maxDurationMs;
-        const speedRatio = Math.max(0, 1 - (respTime / maxDurationMs));
-        const earned = Math.round(500 + 500 * speedRatio);
-        player.score += earned;
-        player.lastEarnedPoints = earned;
-      } else {
-        player.lastEarnedPoints = 0;
-      }
-    } else {
-      player.lastEarnedPoints = 0;
-    }
-  }
-
-  const distribution = getDistribution(room);
-  let totalAnswered = 0;
-  for (const p of room.players.values()) {
-    if (p.currentAnswer) totalAnswered++;
-  }
-
-  // Sort players to calculate ranks
-  const sortedPlayers = Array.from(room.players.values()).sort((a, b) => b.score - a.score);
-  const playerRankMap = new Map();
-  sortedPlayers.forEach((p, idx) => {
-    playerRankMap.set(p.id, idx + 1);
-  });
-
-  // 1. Send detailed question outcome to HOST ONLY
-  if (room.hostSocketId) {
-    io.to(room.hostSocketId).emit('host_question_result', {
-      correct: qObj.correct,
-      distribution,
-      totalAnswered,
-      totalPlayers: room.players.size,
-      leaderboard: getLeaderboard(room, 5)
-    });
-  }
-
-  // 2. ZERO-TRUST: Send only player-specific result to MOBILE PLAYERS
-  // NO question text, NO option text, NO other options payload!
-  for (const player of room.players.values()) {
-    const isCorrect = (player.currentAnswer === qObj.correct);
-    io.to(player.id).emit('player_question_result', {
-      action: 'show_result',
-      isCorrect,
-      selectedAnswer: player.currentAnswer || null,
-      earnedPoints: player.lastEarnedPoints,
-      totalScore: player.score,
-      rank: playerRankMap.get(player.id) || 1,
-      totalPlayers: room.players.size
-    });
+function isOriginAllowed(origin, host) {
+  if (!origin) return true;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
   }
 }
+
+const io = new Server(server, {
+  maxHttpBufferSize: 4 * 1024,
+  pingInterval: 20000,
+  pingTimeout: 20000,
+  connectTimeout: 15000,
+  serveClient: true,
+  allowRequest: (req, callback) => {
+    callback(null, isOriginAllowed(req.headers.origin, req.headers.host));
+  }
+});
+
+const socketsPerIp = new Map();
+
+io.use((socket, next) => {
+  const ip = getSocketIp(socket);
+  const ban = isIpBanned(ip);
+  if (ban.banned) return next(new Error(`IP engellendi. Kalan süre: ${ban.remainingSec} saniye.`));
+  const count = socketsPerIp.get(ip) || 0;
+  if (count >= LIMITS.maxSocketsPerIp) return next(new Error('Bu ağdan çok fazla bağlantı var.'));
+  socketsPerIp.set(ip, count + 1);
+  socket.data.ip = ip;
+  next();
+});
 
 io.on('connection', (socket) => {
-  const clientIp = getSocketIp(socket);
+  const clientIp = socket.data.ip;
+  const bucket = { tokens: LIMITS.eventBurst, last: Date.now() };
+  const throttles = new Map();
 
-  // Check ban before processing any events
-  const banStatus = isIpBanned(clientIp);
-  if (banStatus.banned) {
-    socket.emit('auth_error', {
-      message: `IP engellendi. Kalan süre: ${banStatus.remainingSec} saniye.`
-    });
-    socket.disconnect(true);
-    return;
-  }
+  const throttled = (key, ms) => {
+    const now = Date.now();
+    if (now - (throttles.get(key) || 0) < ms) return true;
+    throttles.set(key, now);
+    return false;
+  };
 
-  // --- HOST REGISTRATION ---
-  socket.on('host_join_room', (data) => {
-    const pin = sanitizeString(data?.pin, 6);
-    const room = rooms.get(pin);
-
-    if (!room) {
-      socket.emit('auth_error', { message: 'Geçersiz oda PIN.' });
+  socket.use((packet, next) => {
+    const now = Date.now();
+    const refill = ((now - bucket.last) / LIMITS.eventWindowMs) * LIMITS.eventBurst;
+    bucket.tokens = Math.min(LIMITS.eventBurst, bucket.tokens + refill);
+    bucket.last = now;
+    if (bucket.tokens < 1) {
+      console.warn(`[SECURITY] Event flood from ${clientIp}, disconnecting.`);
+      socket.disconnect(true);
       return;
     }
+    bucket.tokens -= 1;
+    next();
+  });
 
-    // Set Host Socket ID
+  const on = (event, handler) => {
+    socket.on(event, (data) => {
+      try {
+        handler(data && typeof data === 'object' ? data : {});
+      } catch (err) {
+        console.error(`[SOCKET ERROR] ${event}:`, err && err.message);
+      }
+    });
+  };
+
+  const authError = (message) => socket.emit('auth_error', { message });
+
+  function validateHost(pin) {
+    const room = isPin(pin) ? rooms.get(pin) : null;
+    if (!room || socket.data.role !== 'host' || socket.data.pin !== pin || room.hostSocketId !== socket.id) {
+      socket.emit('error_msg', 'Erişim reddedildi: Bu işlemi yalnızca Host gerçekleştirebilir.');
+      return null;
+    }
+    touch(room);
+    return room;
+  }
+
+  /* --- Host attach / reattach (requires secret host token) --- */
+  on('host_join_room', (data) => {
+    if (socket.data.role) return;
+    const room = isPin(data.pin) ? rooms.get(data.pin) : null;
+    if (!room || !safeTokenEqual(data.hostToken, room.hostToken)) {
+      recordFailedPinAttempt(clientIp);
+      return authError('Host doğrulaması başarısız.');
+    }
+
+    if (room.hostSocketId && room.hostSocketId !== socket.id) {
+      const prev = io.sockets.sockets.get(room.hostSocketId);
+      if (prev) {
+        prev.data.role = null;
+        prev.emit('room_closed', { message: 'Panel başka bir sekmede açıldı.' });
+        prev.disconnect(true);
+      }
+    }
+    if (room.hostGraceTimeout) {
+      clearTimeout(room.hostGraceTimeout);
+      room.hostGraceTimeout = null;
+    }
+
     room.hostSocketId = socket.id;
-    socket.join(pin);
-    console.log(`[HOST ATTACHED] Room PIN: ${pin}, Host Socket: ${socket.id}`);
-
-    const pathData = room.selectedPath;
-    let catName = '';
-    try { catName = questionDb.grades[pathData.gradeId].subjects[pathData.subId].topics[pathData.topId].tests[pathData.testId].name; } catch(e){}
+    socket.data.role = 'host';
+    socket.data.pin = room.pin;
+    socket.join(room.pin);
+    touch(room);
+    io.to(room.pin).except(socket.id).emit('host_status', { online: true });
 
     socket.emit('host_connected', {
       pin: room.pin,
       state: room.state,
-      categories: getStructureList(),
+      categories: CATEGORY_STRUCTURE,
       selectedPath: room.selectedPath,
-      categoryName: catName,
-      players: Array.from(room.players.values()).map(p => ({ id: p.id, nickname: p.nickname, score: p.score }))
+      categoryName: room.testName,
+      questionCount: room.questions.length,
+      settings: room.settings,
+      players: publicPlayers(room)
     });
+
+    if (room.state === 'QUESTION') {
+      const qObj = room.questions[room.currentQuestionIndex];
+      socket.emit('host_show_question', {
+        questionIndex: room.currentQuestionIndex,
+        totalQuestions: room.questions.length,
+        categoryName: room.testName,
+        q: qObj.q,
+        options: qObj.options,
+        duration: room.questionDuration,
+        remaining: room.remainingSeconds,
+        totalPlayers: room.players.size,
+        answeredCount: answeredCount(room)
+      });
+    }
   });
 
-  // --- PLAYER REGISTRATION ---
-  socket.on('player_join_room', (data) => {
-    // Debounce fast connection attempts
-    if (isThrottled(socket.id + '_join', 500)) return;
+  /* --- Player join --- */
+  on('player_join_room', (data) => {
+    if (socket.data.role || throttled('join', 500)) return;
 
-    const currentBan = isIpBanned(clientIp);
-    if (currentBan.banned) {
-      socket.emit('auth_error', { message: `IP engellendi. Kalan: ${currentBan.remainingSec} sn.` });
-      return;
-    }
+    const ban = isIpBanned(clientIp);
+    if (ban.banned) return authError(`IP engellendi. Kalan: ${ban.remainingSec} sn.`);
 
-    const pin = sanitizeString(data?.pin, 6);
-    const rawNickname = data?.nickname;
-
-    if (!/^\d{6}$/.test(pin)) {
+    if (!isPin(data.pin)) {
       recordFailedPinAttempt(clientIp);
-      socket.emit('auth_error', { message: 'PIN 6 haneli rakamlardan oluşmalıdır.' });
-      return;
+      return authError('PIN 6 haneli rakamlardan oluşmalıdır.');
     }
-
-    const room = rooms.get(pin);
+    const room = rooms.get(data.pin);
     if (!room) {
       recordFailedPinAttempt(clientIp);
-      socket.emit('auth_error', { message: 'Oda bulunamadı. Lütfen PIN kontrol ediniz.' });
-      return;
+      return authError('Oda bulunamadı. Lütfen PIN kodunu kontrol edin.');
     }
+    if (room.state !== 'LOBBY') return authError('Oyun zaten başlamış veya kapalı.');
+    if (room.players.size >= LIMITS.maxPlayersPerRoom) return authError('Oda dolu.');
 
-    if (room.state !== 'LOBBY') {
-      socket.emit('auth_error', { message: 'Oyun zaten başlamış veya kapalı.' });
-      return;
-    }
+    const nickname = sanitizeNickname(data.nickname);
+    if (nickname.length < 2) return authError('Geçersiz takma ad (en az 2 karakter, özel karakter içermez).');
+    const nickKey = nickname.toLocaleLowerCase('tr');
+    if (room.nicknames.has(nickKey)) return authError('Bu takma ad odada zaten kullanılıyor.');
 
-    const nickname = sanitizeNickname(rawNickname);
-    if (!nickname || nickname.length < 2) {
-      socket.emit('auth_error', { message: 'Geçersiz takma ad (En az 2 karakter, özel karakter içermez).' });
-      return;
-    }
-
-    // Check duplicate nickname in room
-    const isNameTaken = Array.from(room.players.values()).some(
-      p => p.nickname.toLowerCase() === nickname.toLowerCase()
-    );
-    if (isNameTaken) {
-      socket.emit('auth_error', { message: 'Bu takma ad odada zaten kullanılıyor.' });
-      return;
-    }
-
-    // Success: Clear failed attempts for this IP
     resetFailedPinAttempts(clientIp);
 
-    // Save player in RAM
-    const playerObj = {
-      id: socket.id,
+    const player = {
+      id: crypto.randomBytes(8).toString('hex'),
+      token: newToken(),
+      socketId: socket.id,
       nickname,
+      nickKey,
+      online: true,
+      graceTimeout: null,
       score: 0,
+      streak: 0,
       currentAnswer: null,
-      answeredAt: 0,
-      ip: clientIp,
+      responseTimeMs: 0,
       lastEarnedPoints: 0
     };
+    room.players.set(player.id, player);
+    room.nicknames.add(nickKey);
+    socket.data.role = 'player';
+    socket.data.pin = room.pin;
+    socket.data.playerId = player.id;
+    socket.join(room.pin);
+    touch(room);
 
-    room.players.set(socket.id, playerObj);
-    socket.join(pin);
+    socket.emit('player_joined', { pin: room.pin, nickname, state: room.state, sessionToken: player.token });
+    pushPlayerList(room);
+  });
 
-    console.log(`[PLAYER JOINED] PIN: ${pin}, Nick: ${nickname}, Socket: ${socket.id}, IP: ${clientIp}`);
+  /* --- Player resume after network drop --- */
+  on('player_rejoin', (data) => {
+    if (socket.data.role || throttled('rejoin', 1000)) return;
+    const room = isPin(data.pin) ? rooms.get(data.pin) : null;
+    if (!room || !isToken(data.sessionToken) || room.revokedTokens.has(data.sessionToken)) {
+      return socket.emit('rejoin_failed', { message: 'Oturum bulunamadı.' });
+    }
+    const player = Array.from(room.players.values()).find((p) => safeTokenEqual(p.token, data.sessionToken));
+    if (!player) return socket.emit('rejoin_failed', { message: 'Oturum süresi doldu.' });
 
-    // Confirm to player
+    if (player.graceTimeout) {
+      clearTimeout(player.graceTimeout);
+      player.graceTimeout = null;
+    }
+    const prev = player.socketId && io.sockets.sockets.get(player.socketId);
+    if (prev && prev.id !== socket.id) {
+      prev.data.role = null;
+      prev.disconnect(true);
+    }
+
+    player.socketId = socket.id;
+    player.online = true;
+    socket.data.role = 'player';
+    socket.data.pin = room.pin;
+    socket.data.playerId = player.id;
+    socket.join(room.pin);
+
     socket.emit('player_joined', {
       pin: room.pin,
-      nickname,
-      state: room.state
+      nickname: player.nickname,
+      state: room.state,
+      sessionToken: player.token,
+      resumed: true,
+      totalScore: player.score
     });
+    if (!room.hostSocketId) socket.emit('host_status', { online: false });
 
-    // Notify Host of updated player list
-    if (room.hostSocketId) {
-      io.to(room.hostSocketId).emit('player_list_updated', {
-        count: room.players.size,
-        players: Array.from(room.players.values()).map(p => ({ id: p.id, nickname: p.nickname, score: p.score }))
-      });
-    }
-  });
-
-  // --- ACCESS CONTROL: HOST-ONLY GAME FLOW COMMANDS ---
-  function validateHost(pin) {
-    const room = rooms.get(pin);
-    if (!room) return null;
-    if (room.hostSocketId !== socket.id) {
-      socket.emit('error_msg', 'Erişim reddedildi: Bu işlemi yalnızca Host gerçekleştirebilir.');
-      return null;
-    }
-    return room;
-  }
-
-  // Host kicks a player
-  socket.on('host_kick_player', (data) => {
-    const pin = sanitizeString(data?.pin, 6);
-    const playerId = sanitizeString(data?.playerId, 100);
-    const room = validateHost(pin);
-    if (!room) return;
-
-    if (room.players.has(playerId)) {
-      const p = room.players.get(playerId);
-      console.log(`[HOST KICKED] Player ${p.nickname} from Room ${pin}`);
-      room.players.delete(playerId);
-      
-      // Notify the kicked player
-      io.to(playerId).emit('room_closed', { message: 'Host tarafından odadan çıkarıldınız.' });
-      
-      // Update Host UI
-      io.to(room.hostSocketId).emit('player_list_updated', {
-        count: room.players.size,
-        players: Array.from(room.players.values()).map(pl => ({ id: pl.id, nickname: pl.nickname, score: pl.score }))
-      });
-    }
-  });
-
-  // Host selects question path in lobby
-  socket.on('host_select_category', (data) => {
-    const pin = sanitizeString(data?.pin, 6);
-    const pathData = data?.selectedPath;
-    const room = validateHost(pin);
-    if (!room) return;
-
-    if (room.state !== 'LOBBY') {
-      socket.emit('error_msg', 'Kategori yalnızca lobi aşamasında değiştirilebilir.');
-      return;
-    }
-
-    if (!pathData || !pathData.gradeId || !pathData.subId || !pathData.topId || !pathData.testId) {
-       socket.emit('error_msg', 'Geçersiz kategori yolu.');
-       return;
-    }
-
-    const qs = getQuestionsFromPath(pathData.gradeId, pathData.subId, pathData.topId, pathData.testId);
-    if (!qs || qs.length === 0) {
-      socket.emit('error_msg', 'Seçilen test bulunamadı veya boş.');
-      return;
-    }
-
-    let catName = '';
-    try { catName = questionDb.grades[pathData.gradeId].subjects[pathData.subId].topics[pathData.topId].tests[pathData.testId].name; } catch(e){}
-
-    room.selectedPath = pathData;
-    room.questions = qs;
-    room.settings = {
-      questionDuration: parseInt(data.settings?.questionDuration) || 20,
-      autoFinish: data.settings?.autoFinish !== false,
-      autoSkipLeaderboard: data.settings?.autoSkipLeaderboard === true
-    };
-    console.log(`[TEST SELECTED] Room PIN: ${pin}, Test: ${catName}`);
-
-    socket.emit('host_category_updated', {
-      selectedPath: pathData,
-      categoryName: catName,
-      questionCount: room.questions.length
-    });
-  });
-
-  // Host starts game or moves to next question
-  socket.on('host_next_question', (data) => {
-    const pin = sanitizeString(data?.pin, 6);
-    const room = validateHost(pin);
-    if (!room) return;
-    if (room) room.lastActivity = Date.now();
-
-    // Throttle host clicks
-    if (isThrottled(socket.id + '_next', 800)) return;
-
-    if (room.timerInterval) {
-      clearInterval(room.timerInterval);
-      room.timerInterval = null;
-    }
-    
-    if (room.leaderboardTimeout) {
-      clearTimeout(room.leaderboardTimeout);
-      room.leaderboardTimeout = null;
-    }
-
-    const roomQuestions = room.questions || [];
-
-    room.currentQuestionIndex += 1;
-
-    // Check if game finished
-    if (room.currentQuestionIndex >= roomQuestions.length) {
-      room.state = 'PODIUM';
-      const finalLeaderboard = getLeaderboard(room, 10);
-      
-      io.to(room.hostSocketId).emit('host_game_over', {
-        podium: finalLeaderboard.slice(0, 3),
-        leaderboard: finalLeaderboard
-      });
-
-      // Notify mobile players of game over
-      const sorted = Array.from(room.players.values()).sort((a, b) => b.score - a.score);
-      sorted.forEach((p, idx) => {
-        io.to(p.id).emit('player_game_over', {
-          rank: idx + 1,
-          totalScore: p.score,
-          totalPlayers: room.players.size
+    const rank = rankedPlayers(room).findIndex((p) => p.id === player.id) + 1;
+    if (room.state === 'QUESTION') {
+      if (player.currentAnswer) {
+        socket.emit('player_answer_received', { selectedAnswer: player.currentAnswer });
+      } else {
+        socket.emit('player_show_buttons', {
+          action: 'show_buttons',
+          questionIndex: room.currentQuestionIndex + 1,
+          totalQuestions: room.questions.length,
+          duration: room.remainingSeconds
         });
-      });
-      return;
-    }
-
-    // Prepare Question
-    const qIndex = room.currentQuestionIndex;
-    const qObj = roomQuestions[qIndex];
-    room.state = 'QUESTION';
-    room.questionStartTime = Date.now();
-    room.questionDuration = room.settings?.questionDuration || 20;
-    room.remainingSeconds = room.questionDuration;
-
-    // Reset player answers for this question
-    for (const player of room.players.values()) {
-      player.currentAnswer = null;
-      player.answeredAt = 0;
-      player.responseTimeMs = 0;
-      player.lastEarnedPoints = 0;
-    }
-
-    // 1. Send FULL QUESTION AND OPTIONS to HOST SMARTBOARD
-    // Notice: We NEVER send `correct` answer even to Host client in network payload during countdown!
-    
-    let catName = '';
-    try { catName = questionDb.grades[room.selectedPath.gradeId].subjects[room.selectedPath.subId].topics[room.selectedPath.topId].tests[room.selectedPath.testId].name; } catch(e){}
-
-    io.to(room.hostSocketId).emit('host_show_question', {
-      questionIndex: qIndex,
-      totalQuestions: roomQuestions.length,
-      categoryName: catName,
-      categoryId: room.selectedCategory,
-      q: qObj.q,
-      options: qObj.options,
-      duration: room.questionDuration,
-      totalPlayers: room.players.size,
-      answeredCount: 0
-    });
-
-    // 2. CRITICAL ZERO-TRUST: Send strictly "show_buttons" to MOBILE PLAYERS
-    // ZERO question text, ZERO option texts, ZERO answers!
-    for (const player of room.players.values()) {
-      io.to(player.id).emit('player_show_buttons', {
-        action: 'show_buttons',
-        questionIndex: qIndex + 1,
-        totalQuestions: roomQuestions.length,
-        duration: room.questionDuration
-      });
-    }
-
-    // Start 1-second server countdown
-    room.timerInterval = setInterval(() => {
-      room.remainingSeconds -= 1;
-
-      // Broadcast tick to host AND players
-      io.to(pin).emit('timer_tick', {
-        remainingSeconds: room.remainingSeconds
-      });
-
-      if (room.remainingSeconds <= 0) {
-        finishQuestion(room);
       }
-    }, 1000);
+    } else if (room.state === 'RESULT') {
+      socket.emit('player_question_result', playerResultPayload(room, player, rank));
+    } else if (room.state === 'LEADERBOARD') {
+      socket.emit('player_leaderboard_view', { rank, score: player.score, totalPlayers: room.players.size });
+    } else if (room.state === 'PODIUM') {
+      socket.emit('player_game_over', { rank, totalScore: player.score, totalPlayers: room.players.size });
+    }
+    pushPlayerList(room);
   });
 
-  // Host shows leaderboard between questions
-  socket.on('host_show_leaderboard', (data) => {
-    const pin = sanitizeString(data?.pin, 6);
-    const room = validateHost(pin);
-    if (!room) return;
-
-    const roomQuestions = room.questions || [];
-
-    room.state = 'LEADERBOARD';
-    const topPlayers = getLeaderboard(room, 5);
-
-    let catName = '';
-    try { catName = questionDb.grades[room.selectedPath.gradeId].subjects[room.selectedPath.subId].topics[room.selectedPath.topId].tests[room.selectedPath.testId].name; } catch(e){}
-
-    io.to(room.hostSocketId).emit('host_leaderboard_view', {
-      leaderboard: topPlayers,
-      questionIndex: room.currentQuestionIndex + 1,
-      totalQuestions: roomQuestions.length,
-      categoryName: catName
-    });
-
-    // Notify players of current leaderboard view
-    const sorted = Array.from(room.players.values()).sort((a, b) => b.score - a.score);
-    sorted.forEach((p, idx) => {
-      io.to(p.id).emit('player_leaderboard_view', {
-        rank: idx + 1,
-        score: p.score,
-        totalPlayers: room.players.size
-      });
-    });
-
-    // Auto-skip leaderboard if enabled
-    if (room.settings?.autoSkipLeaderboard) {
-      if (room.leaderboardTimeout) clearTimeout(room.leaderboardTimeout);
-      room.leaderboardTimeout = setTimeout(() => {
-        // If still in LEADERBOARD state after 10s
-        if (room.state === 'LEADERBOARD') {
-          if (room.currentQuestionIndex + 1 >= room.questions.length) {
-            // End game if it was the last question
-            room.state = 'PODIUM';
-            const finalLeaderboard = getLeaderboard(room, 10);
-            io.to(room.hostSocketId).emit('host_game_over', {
-              podium: finalLeaderboard.slice(0, 3),
-              leaderboard: finalLeaderboard
-            });
-            sorted.forEach((p, idx) => {
-              io.to(p.id).emit('player_game_over', { rank: idx + 1, totalScore: p.score, totalPlayers: room.players.size });
-            });
-          } else {
-            // Tell host to go to next question
-            io.to(room.hostSocketId).emit('auto_next_question');
-          }
-        }
-      }, 10000); // 10 seconds
-    }
-  });
-
-  // Host ends game early or triggers podium
-  socket.on('host_end_game', (data) => {
-    const pin = sanitizeString(data?.pin, 6);
-    const room = validateHost(pin);
-    if (!room) return;
-
-    if (room.timerInterval) {
-      clearInterval(room.timerInterval);
-      room.timerInterval = null;
-    }
-
-    room.state = 'PODIUM';
-    const finalLeaderboard = getLeaderboard(room, 10);
-
-    io.to(room.hostSocketId).emit('host_game_over', {
-      podium: finalLeaderboard.slice(0, 3),
-      leaderboard: finalLeaderboard
-    });
-
-    const sorted = Array.from(room.players.values()).sort((a, b) => b.score - a.score);
-    sorted.forEach((p, idx) => {
-      io.to(p.id).emit('player_game_over', {
-        rank: idx + 1,
-        totalScore: p.score,
-        totalPlayers: room.players.size
-      });
-    });
-  });
-
-  // --- PLAYER SUBMITS ANSWER ---
-  socket.on('player_submit_answer', (data) => {
-    // 5. DEBOUNCE / THROTTLE: Prevent rapid flood attacks (1 sec throttle per socket)
-    if (isThrottled(socket.id + '_answer', 500)) {
-      return;
-    }
-
-    const pin = sanitizeString(data?.pin, 6);
-    const answer = sanitizeString(data?.answer, 1).toUpperCase();
-
-    if (!['A', 'B', 'C', 'D'].includes(answer)) {
-      return;
-    }
-
-    const room = rooms.get(pin);
-    if (!room || room.state !== 'QUESTION') {
-      return; // Answer rejected if question is not actively running
-    }
-
-    const player = room.players.get(socket.id);
+  /* --- Host commands --- */
+  on('host_kick_player', (data) => {
+    const room = validateHost(data.pin);
+    if (!room || typeof data.playerId !== 'string') return;
+    const player = room.players.get(data.playerId);
     if (!player) return;
 
-    // Check if player has already answered this question
-    if (player.currentAnswer !== null) {
-      return; // Multiple submissions per question strictly ignored
-    }
+    if (player.graceTimeout) clearTimeout(player.graceTimeout);
+    room.players.delete(player.id);
+    room.nicknames.delete(player.nickKey);
+    room.revokedTokens.add(player.token);
 
-    // Calculate response time and record on the backend
-    const now = Date.now();
-    const responseTimeMs = Math.max(0, now - room.questionStartTime);
-    const maxDurationMs = room.questionDuration * 1000;
-
-    if (responseTimeMs > maxDurationMs + 1000) {
-      // Answer arrived after question expired
-      return;
+    const ps = player.socketId && io.sockets.sockets.get(player.socketId);
+    if (ps) {
+      ps.emit('room_closed', { message: 'Eğitmen tarafından odadan çıkarıldın.', kicked: true });
+      ps.data.role = null;
+      ps.leave(room.pin);
+      setTimeout(() => ps.disconnect(true), 100);
     }
+    pushPlayerList(room);
+  });
+
+  on('host_select_category', (data) => {
+    const room = validateHost(data.pin);
+    if (!room) return;
+    if (room.state !== 'LOBBY') return socket.emit('error_msg', 'Test yalnızca lobi aşamasında değiştirilebilir.');
+
+    const test = resolveTest(data.selectedPath);
+    if (!test) return socket.emit('error_msg', 'Seçilen test bulunamadı veya boş.');
+
+    const s = data.settings && typeof data.settings === 'object' ? data.settings : {};
+    const duration = Number.parseInt(s.questionDuration, 10);
+
+    room.selectedPath = test.path;
+    room.testName = test.label;
+    room.questions = test.questions;
+    room.settings = {
+      questionDuration: LIMITS.allowedDurations.includes(duration) ? duration : 20,
+      autoFinish: s.autoFinish !== false,
+      autoSkipLeaderboard: s.autoSkipLeaderboard === true
+    };
+
+    socket.emit('host_category_updated', {
+      selectedPath: test.path,
+      categoryName: test.label,
+      questionCount: test.questions.length,
+      settings: room.settings
+    });
+  });
+
+  on('host_next_question', (data) => {
+    const room = validateHost(data.pin);
+    if (!room || throttled('next', 800)) return;
+    if (!['LOBBY', 'RESULT', 'LEADERBOARD'].includes(room.state)) return;
+    if (room.state === 'LOBBY' && room.players.size === 0) {
+      return socket.emit('error_msg', 'Oyunu başlatmak için en az bir öğrenci gerekli.');
+    }
+    startNextQuestion(room);
+  });
+
+  on('host_skip_timer', (data) => {
+    const room = validateHost(data.pin);
+    if (!room || room.state !== 'QUESTION') return;
+    io.to(room.pin).emit('timer_tick', { remainingSeconds: 0 });
+    finishQuestion(room);
+  });
+
+  on('host_show_leaderboard', (data) => {
+    const room = validateHost(data.pin);
+    if (!room || room.state !== 'RESULT' || throttled('board', 500)) return;
+    showLeaderboard(room);
+  });
+
+  on('host_end_game', (data) => {
+    const room = validateHost(data.pin);
+    if (!room || room.state === 'PODIUM') return;
+    gameOver(room);
+  });
+
+  /* --- Player answer --- */
+  on('player_submit_answer', (data) => {
+    if (socket.data.role !== 'player' || throttled('answer', 300)) return;
+    const answer = typeof data.answer === 'string' ? data.answer.toUpperCase() : '';
+    if (!['A', 'B', 'C', 'D'].includes(answer)) return;
+
+    const room = rooms.get(socket.data.pin);
+    if (!room || room.state !== 'QUESTION' || data.pin !== room.pin) return;
+    const player = room.players.get(socket.data.playerId);
+    if (!player || player.currentAnswer) return;
+
+    const elapsed = Math.max(0, Date.now() - room.questionStartTime);
+    if (elapsed > room.questionDuration * 1000 + 500) return;
 
     player.currentAnswer = answer;
-    player.answeredAt = now;
-    player.responseTimeMs = responseTimeMs;
+    player.responseTimeMs = elapsed;
+    socket.emit('player_answer_received', { selectedAnswer: answer });
 
-    // Acknowledge submission to player (NO feedback yet whether right/wrong!)
-    socket.emit('player_answer_received', {
-      selectedAnswer: answer
-    });
+    const answered = answeredCount(room);
+    toHost(room, 'host_answer_update', { answeredCount: answered, totalPlayers: room.players.size });
 
-    // Count how many answered
-    let answeredCount = 0;
-    for (const p of room.players.values()) {
-      if (p.currentAnswer !== null) answeredCount++;
-    }
-
-    // Notify Host of updated answer count
-    if (room.hostSocketId) {
-      io.to(room.hostSocketId).emit('host_answer_update', {
-        answeredCount,
-        totalPlayers: room.players.size
-      });
-    }
-
-    // Auto-finish if everyone answered and setting is enabled
-    if (room.settings?.autoFinish && answeredCount >= room.players.size) {
-      if (room.timerInterval) {
-        clearInterval(room.timerInterval);
-        room.timerInterval = null;
-      }
-      room.remainingSeconds = 0;
-      io.to(pin).emit('timer_tick', { remainingSeconds: 0 });
+    if (room.settings.autoFinish && answered >= onlineCount(room)) {
+      io.to(room.pin).emit('timer_tick', { remainingSeconds: 0 });
       finishQuestion(room);
     }
   });
 
-  // --- DISCONNECT HANDLING ---
+  /* --- Disconnect --- */
   socket.on('disconnect', () => {
-    socketThrottleMap.delete(socket.id);
+    const left = (socketsPerIp.get(clientIp) || 1) - 1;
+    if (left <= 0) socketsPerIp.delete(clientIp);
+    else socketsPerIp.set(clientIp, left);
 
-    // Check if socket was a host or player in any room
-    for (const [pin, room] of rooms.entries()) {
-      if (room.hostSocketId === socket.id) {
-        console.log(`[HOST DISCONNECTED] Room PIN: ${pin}`);
-        if (room.timerInterval) clearInterval(room.timerInterval);
-        io.to(pin).emit('room_closed', { message: 'Host bağlantısı kesildi. Oyun sonlandırıldı.' });
-        rooms.delete(pin);
-        break;
-      }
+    const room = socket.data.pin && rooms.get(socket.data.pin);
+    if (!room) return;
 
-      if (room.players.has(socket.id)) {
-        const p = room.players.get(socket.id);
-        console.log(`[PLAYER DISCONNECTED] PIN: ${pin}, Nick: ${p.nickname}`);
-        room.players.delete(socket.id);
-
-        // Update Host
-        if (room.hostSocketId) {
-          io.to(room.hostSocketId).emit('player_list_updated', {
-            count: room.players.size,
-            players: Array.from(room.players.values()).map(pl => ({ id: pl.id, nickname: pl.nickname, score: pl.score }))
-          });
-
-          // If during question, update answer counter. Never finish question early.
-          if (room.state === 'QUESTION') {
-            let answered = 0;
-            for (const pl of room.players.values()) {
-              if (pl.currentAnswer !== null) answered++;
-            }
-            io.to(room.hostSocketId).emit('host_answer_update', {
-              answeredCount: answered,
-              totalPlayers: room.players.size
-            });
-          }
+    if (socket.data.role === 'host' && room.hostSocketId === socket.id) {
+      room.hostSocketId = null;
+      io.to(room.pin).emit('host_status', { online: false });
+      room.hostGraceTimeout = setTimeout(() => {
+        if (rooms.has(room.pin) && !room.hostSocketId) {
+          closeRoom(room, 'Eğitmen bağlantısı kesildi. Oyun sonlandırıldı.');
         }
-        break;
+      }, LIMITS.hostGraceMs);
+      return;
+    }
+
+    if (socket.data.role === 'player') {
+      const player = room.players.get(socket.data.playerId);
+      if (!player || player.socketId !== socket.id) return;
+      player.online = false;
+      player.socketId = null;
+
+      if (room.state === 'LOBBY') {
+        player.graceTimeout = setTimeout(() => {
+          if (!player.online && rooms.has(room.pin) && room.state === 'LOBBY') {
+            room.players.delete(player.id);
+            room.nicknames.delete(player.nickKey);
+            pushPlayerList(room);
+          }
+        }, LIMITS.lobbyPlayerGraceMs);
+      }
+      pushPlayerList(room);
+
+      if (room.state === 'QUESTION') {
+        toHost(room, 'host_answer_update', { answeredCount: answeredCount(room), totalPlayers: room.players.size });
       }
     }
   });
 });
 
-// --- ZOMBIE ROOM GARBAGE COLLECTOR (Memory Leak & Timeout Fix) ---
-// Runs every 5 minutes. Clears rooms that have been inactive for more than 10 minutes.
+/* ───────────────────────── Housekeeping ───────────────────────── */
+
 setInterval(() => {
   const now = Date.now();
-  let clearedCount = 0;
-  for (const [pin, room] of rooms.entries()) {
-    const inactiveMs = now - (room.lastActivity || room.createdAt);
-    const isInactive10Mins = inactiveMs > 10 * 60 * 1000;
-    
-    if (isInactive10Mins) {
-      if (room.timerInterval) clearInterval(room.timerInterval);
-      
-      // Notify clients before closing
-      io.to(pin).emit('room_closed', { message: 'Oda uzun süre hareketsiz kaldığı için kapatıldı (10dk zaman aşımı).' });
-      io.in(pin).socketsLeave(pin);
-      
-      rooms.delete(pin);
-      clearedCount++;
+  for (const room of rooms.values()) {
+    if (now - room.lastActivity > LIMITS.roomIdleMs) {
+      closeRoom(room, 'Oda uzun süre hareketsiz kaldığı için kapatıldı.');
     }
   }
-  if (clearedCount > 0) {
-    console.log(`[GARBAGE COLLECTOR] Cleared ${clearedCount} inactive rooms due to 10-minute timeout.`);
+  for (const [ip, record] of failedPinAttempts.entries()) {
+    if ((!record.bannedUntil || record.bannedUntil <= now) && now - record.windowStart > WINDOW_DURATION_MS) {
+      failedPinAttempts.delete(ip);
+    }
   }
-}, 5 * 60 * 1000);
+}, 60 * 1000).unref();
 
-// START SERVER
+process.on('unhandledRejection', (err) => console.error('[UNHANDLED]', err));
+
 server.listen(PORT, () => {
-  console.log(`===================================================`);
-  console.log(`PARS LAB RETRO QUIZ SERVER RUNNING ON PORT ${PORT}`);
-  console.log(`Host Interface  : http://localhost:${PORT}/host.html`);
-  console.log(`Player Interface: http://localhost:${PORT}/`);
-  console.log(`===================================================`);
+  console.log(`PARS LAB server on :${PORT}  —  host: /host.html  player: /`);
 });
