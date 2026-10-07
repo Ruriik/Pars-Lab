@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/style.css?v=2">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 </head>
 <body class="host-layout">
 
@@ -25,6 +26,9 @@
         <span class="pin-label">Katılım Kodu</span>
         <span class="pin-code" id="pinDisplay">------</span>
       </div>
+      <button type="button" class="qr-toggle" id="btnQrOpen" aria-label="QR kodunu büyüt" title="QR kodunu göster" disabled>
+        <i data-lucide="qr-code"></i>
+      </button>
     </div>
     <div class="top-bar-right">
       <div class="player-counter">
@@ -92,12 +96,20 @@
 
       <!-- Main -->
       <div class="lobby-main">
-        <h2><i data-lucide="radio"></i> Lobi Aktif</h2>
-        <div class="active-test" id="activeTestBox">
-          <i data-lucide="file-text"></i>
-          <span id="activeTestName">Test seçilmedi</span>
+        <div class="lobby-head">
+          <div class="lobby-head-text">
+            <h2><i data-lucide="radio"></i> Lobi Aktif</h2>
+            <div class="active-test" id="activeTestBox">
+              <i data-lucide="file-text"></i>
+              <span id="activeTestName">Test seçilmedi</span>
+            </div>
+            <p class="lobby-info">Öğrenciler QR kodu telefon kamerasıyla okutarak ya da PIN kodunu girerek katılabilirler. Uygunsuz isimleri X butonuyla atabilirsiniz.</p>
+          </div>
+          <button type="button" class="qr-card" id="btnQrCard" aria-label="QR kodunu tam ekran göster">
+            <div class="qr-image" id="qrLobby" aria-hidden="true"></div>
+            <span class="qr-caption"><i data-lucide="scan-line"></i> Okut ve katıl</span>
+          </button>
         </div>
-        <p class="lobby-info">Öğrenciler telefonlarından PIN kodunu girerek katılabilirler. Uygunsuz isimleri X butonuyla atabilirsiniz.</p>
         <div class="player-grid" id="playerList"></div>
         <div style="margin-top: auto; padding-top: 16px;">
           <button id="btnStartGame" class="btn btn-primary" disabled>
@@ -150,6 +162,20 @@
       </div>
       <button onclick="location.reload()" class="btn btn-primary"><i data-lucide="rotate-ccw"></i> Yeni Quiz</button>
     </section>
+  </div>
+
+  <!-- ═══ QR OVERLAY ═══ -->
+  <div class="qr-overlay" id="qrOverlay" role="dialog" aria-modal="true" aria-labelledby="qrOverlayTitle" hidden>
+    <div class="qr-overlay-card">
+      <button type="button" class="qr-close" id="btnQrClose" aria-label="Kapat"><i data-lucide="x"></i></button>
+      <h2 id="qrOverlayTitle">Telefonunla okut, oyuna katıl</h2>
+      <div class="qr-image qr-image-lg" id="qrLarge" aria-hidden="true"></div>
+      <div class="qr-overlay-pin">
+        <span class="pin-label">PIN</span>
+        <span class="pin-code" id="qrOverlayPin">------</span>
+      </div>
+      <p class="qr-url" id="qrUrl"></p>
+    </div>
   </div>
 
 <script>
@@ -216,9 +242,38 @@ async function createRoom() {
     if (!d.success) return alert(d.error);
     pin = d.pin;
     $('pinDisplay').textContent = pin;
+    renderQr();
     connect();
   } catch(e) { alert('Sunucu bağlantı hatası'); }
 }
+
+// ── QR ──
+function renderQr() {
+  const joinUrl = `${location.origin}/?pin=${encodeURIComponent(pin)}`;
+  const qr = qrcode(0, 'M');
+  qr.addData(joinUrl);
+  qr.make();
+  const svg = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  $('qrLobby').innerHTML = svg;
+  $('qrLarge').innerHTML = svg;
+  $('qrOverlayPin').textContent = pin;
+  $('qrUrl').textContent = joinUrl.replace(/^https?:\/\//, '');
+  $('btnQrOpen').disabled = false;
+}
+
+function openQr() {
+  if (!pin) return;
+  $('qrOverlay').hidden = false;
+  $('btnQrClose').focus();
+}
+function closeQr() {
+  $('qrOverlay').hidden = true;
+}
+$('btnQrOpen').onclick = openQr;
+$('btnQrCard').onclick = openQr;
+$('btnQrClose').onclick = closeQr;
+$('qrOverlay').onclick = e => { if (e.target === $('qrOverlay')) closeQr(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('qrOverlay').hidden) closeQr(); });
 
 function connect() {
   socket = io();

@@ -133,6 +133,12 @@ function show(id) {
 
 const answerBtns = document.querySelectorAll('.answer-btn');
 
+const qrPin = new URLSearchParams(location.search).get('pin');
+if (qrPin && /^\d{6}$/.test(qrPin)) {
+  $('pinInput').value = qrPin;
+  $('nickInput').focus();
+}
+
 // ── Join ──
 $('btnJoin').onclick = () => {
   const p = $('pinInput').value.trim();
